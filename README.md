@@ -48,8 +48,4 @@ curl -X POST http://localhost:8080/api/v1/send \
 - **操作系统：** Linux（amd64/arm64）
 - **数据库：** PostgreSQL 12+
 - **缓存：** Redis 6+
-- **编译（可选）：** Go 1.21+
-
----
-
-**License:** MIT | **Author:** xkatld | **Version:** 1.0.0
+- **编译：** Go 1.23+
