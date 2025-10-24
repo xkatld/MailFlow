@@ -1,0 +1,238 @@
+<style>
+.mailflow-card {
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.mailflow-card-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 2px solid #e9ecef;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mailflow-card-header h6 {
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+}
+
+.mailflow-card-body {
+    padding: 20px;
+}
+
+.modern-table {
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.modern-table thead {
+    background: #f8f9fa;
+    color: #495057;
+}
+
+.modern-table thead th {
+    border: none;
+    padding: 12px 15px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.modern-table tbody tr {
+    border: none;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modern-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.modern-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.modern-table tbody td {
+    border: none;
+    padding: 12px 15px;
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+.progress {
+    height: 8px;
+    border-radius: 4px;
+    background-color: #e9ecef;
+    margin-top: 5px;
+}
+
+.progress-bar {
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    height: 100%;
+}
+
+.quota-percent {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.reset-time {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.loading-container {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+.error-container {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid #f5c6cb;
+    margin: 20px 0;
+}
+
+.quota-value {
+    font-weight: 600;
+}
+</style>
+
+<div class="container-fluid">
+    <div class="card shadow mailflow-card">
+        <div class="card-header mailflow-card-header">
+            <h6 class="m-0">
+                <i class="fas fa-chart-pie mr-2"></i>配额详情
+            </h6>
+            <button class="btn btn-sm btn-secondary" onclick="loadQuota()">
+                <i class="fas fa-sync-alt mr-1"></i>刷新数据
+            </button>
+        </div>
+        <div class="card-body mailflow-card-body">
+            <div id="quotaContent">
+                <div class="loading-container">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>加载中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var currentQuotaContainerId = '';
+
+function loadQuota() {
+    if (!currentQuotaContainerId) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const containerId = urlParams.get('id');
+        if (!containerId) {
+            $('#quotaContent').html('<div class="error-container"><i class="fas fa-exclamation-triangle mr-2"></i>无法获取产品ID</div>');
+            return;
+        }
+        currentQuotaContainerId = containerId;
+    }
+
+    $('#quotaContent').html('<div class="loading-container"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><p>加载中...</p></div>');
+    
+    const timestamp = new Date().getTime();
+    const url = `/provision/custom/content?id=${currentQuotaContainerId}&key=quota&action=getquota&_t=${timestamp}`;
+    
+    $.ajax({
+        url: url,
+        method: 'GET',
+        dataType: 'json',
+        timeout: 10000,
+        cache: false,
+        success: function(response) {
+            if (response.code && response.code !== 200) {
+                $('#quotaContent').html('<div class="error-container"><i class="fas fa-exclamation-triangle mr-2"></i>加载失败: ' + (response.msg || response.error || '未知错误') + '</div>');
+                return;
+            }
+            renderQuota(response);
+        },
+        error: function(xhr, status, error) {
+            $('#quotaContent').html('<div class="error-container"><i class="fas fa-exclamation-triangle mr-2"></i>加载失败: ' + error + '</div>');
+        }
+    });
+}
+
+function renderQuota(quota) {
+    const quotaTypes = [
+        {key: 'minute', name: '每分钟', icon: 'fa-clock'},
+        {key: 'daily', name: '每日', icon: 'fa-calendar-day'},
+        {key: 'weekly', name: '每周', icon: 'fa-calendar-week'},
+        {key: 'monthly', name: '每月', icon: 'fa-calendar-alt'},
+        {key: 'total', name: '总计', icon: 'fa-database'}
+    ];
+
+    let html = '<table class="table modern-table mb-0">';
+    html += '<thead><tr>';
+    html += '<th><i class="fas fa-list mr-1"></i>类型</th>';
+    html += '<th><i class="fas fa-tachometer-alt mr-1"></i>已用/限额</th>';
+    html += '<th><i class="fas fa-battery-half mr-1"></i>剩余</th>';
+    html += '<th><i class="fas fa-percentage mr-1"></i>使用率</th>';
+    html += '<th><i class="fas fa-redo mr-1"></i>重置时间</th>';
+    html += '</tr></thead>';
+    html += '<tbody>';
+
+    quotaTypes.forEach(type => {
+        const q = quota[type.key];
+        if (q) {
+            const percent = q.limit > 0 ? ((q.used / q.limit) * 100).toFixed(1) : 0;
+            let progressClass = 'bg-success';
+            if (percent >= 90) progressClass = 'bg-danger';
+            else if (percent >= 70) progressClass = 'bg-warning';
+            
+            let resetInfo = '无限制';
+            if (q.reset_in) {
+                const minutes = Math.ceil(q.reset_in / 60);
+                if (minutes < 60) {
+                    resetInfo = minutes + ' 分钟后';
+                } else {
+                    const hours = Math.floor(minutes / 60);
+                    resetInfo = hours + ' 小时后';
+                }
+            } else if (q.reset_at) {
+                resetInfo = q.reset_at;
+            }
+
+            html += '<tr>';
+            html += '<td><i class="fas ' + type.icon + ' mr-2 text-muted"></i><strong>' + type.name + '</strong></td>';
+            html += '<td class="quota-value">' + q.used.toLocaleString() + ' / ' + (q.limit > 0 ? q.limit.toLocaleString() : '∞') + '</td>';
+            html += '<td class="quota-value">' + (q.remaining >= 0 ? q.remaining.toLocaleString() : '∞') + '</td>';
+            html += '<td>';
+            html += '<div class="quota-percent">' + percent + '%</div>';
+            html += '<div class="progress">';
+            html += '<div class="progress-bar ' + progressClass + '" style="width: ' + Math.min(percent, 100) + '%"></div>';
+            html += '</div>';
+            html += '</td>';
+            html += '<td class="reset-time">' + resetInfo + '</td>';
+            html += '</tr>';
+        }
+    });
+
+    html += '</tbody></table>';
+    $('#quotaContent').html(html);
+}
+
+$(document).ready(function() {
+    loadQuota();
+    // 每30秒自动刷新一次
+    setInterval(loadQuota, 30000);
+});
+</script>

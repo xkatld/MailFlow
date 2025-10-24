@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API密钥 - MailFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .progress-bar { width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+        .progress { height: 100%; transition: width 0.3s; }
+        .progress-green { background: #22c55e; }
+        .progress-yellow { background: #eab308; }
+        .progress-red { background: #ef4444; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-white min-h-screen">
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">MailFlow</h1>
+                    <div class="flex space-x-1">
+                        <a href="/admin" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:dashboard"></span> 仪表盘
+                        </a>
+                        <a href="/admin/keys" class="px-4 py-2 rounded bg-blue-50 text-blue-600 font-medium flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:key"></span> API密钥
+                        </a>
+                        <a href="/admin/smtp" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:mail"></span> SMTP
+                        </a>
+                        <a href="/admin/plans" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:package"></span> 套餐
+                        </a>
+                        <a href="/admin/admin-tokens" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:admin-panel-settings"></span> Token
+                        </a>
+                        <a href="/admin/logs" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:description"></span> 日志
+                        </a>
+                        <a href="/admin/stats" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:analytics"></span> 统计
+                        </a>
+                    </div>
+                </div>
+                <a href="/admin/logout" class="text-gray-600 hover:text-red-600 flex items-center gap-1">
+                    <span class="iconify" data-icon="material-symbols:logout"></span> 退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">API密钥管理</h2>
+            <button onclick="showCreateModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow flex items-center gap-2">
+                <span class="iconify" data-icon="material-symbols:add"></span> 创建密钥
+            </button>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+            <div id="batchActions" class="hidden space-x-2">
+                <button onclick="batchDelete()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">批量删除</button>
+                <button onclick="batchStatus('active')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">批量启用</button>
+                <button onclick="batchStatus('inactive')" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm">批量禁用</button>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-600">每页显示：</span>
+                <select id="pageSize" onchange="changePageSize()" class="border rounded px-3 py-1 text-sm outline-none">
+                    <option value="25">25</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                    <option value="99999">全部</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-md shadow overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr class="text-left text-gray-600">
+                        <th class="px-6 py-4"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                        <th class="px-6 py-4">名称</th>
+                        <th class="px-6 py-4">API Key</th>
+                        <th class="px-6 py-4">套餐</th>
+                        <th class="px-6 py-4">使用量</th>
+                        <th class="px-6 py-4">状态</th>
+                        <th class="px-6 py-4">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="keysTable" class="divide-y divide-gray-200">
+                    <tr><td colspan="7" class="text-center py-8 text-gray-400">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="pagination" class="mt-4 flex justify-center"></div>
+    </div>
+
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white rounded-md shadow-2xl w-full max-w-2xl p-8 m-4">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">创建API密钥</h3>
+            <form id="createForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">名称</label>
+                    <input type="text" id="name" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">配置方式</label>
+                    <div class="flex space-x-4 mb-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="configMode" value="plan" checked onchange="toggleConfigMode()" class="mr-2">
+                            <span class="text-sm">基于套餐</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="configMode" value="custom" onchange="toggleConfigMode()" class="mr-2">
+                            <span class="text-sm">自定义配置</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="planSection">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">套餐</label>
+                        <select id="planSelect" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" onchange="showPlanDetails()">
+                            <option value="">加载中...</option>
+                        </select>
+                    </div>
+
+                    <div id="planDetails" class="mt-3 bg-blue-50 p-4 rounded text-sm text-gray-700"></div>
+                </div>
+
+                <div id="customSection" class="hidden">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">每分钟限制 (0=无限)</label>
+                            <input type="number" id="customMinuteLimit" value="100" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">每日限制 (0=无限)</label>
+                            <input type="number" id="customDailyLimit" value="5000" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">每周限制 (0=无限)</label>
+                            <input type="number" id="customWeeklyLimit" value="30000" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">每月限制 (0=无限)</label>
+                            <input type="number" id="customMonthlyLimit" value="100000" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">总额限制 (0=无限制)</label>
+                    <input type="number" id="totalLimit" value="0" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                </div>
+
+                <div class="flex space-x-3 pt-4">
+                    <button type="button" onclick="hideModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">取消</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="quotaModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-md shadow-2xl w-full max-w-2xl p-8 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">配额详情</h3>
+            <div id="quotaKeyName" class="text-gray-600 mb-6"></div>
+            
+            <div id="quotaContent" class="space-y-4">
+                <div class="text-center py-4">加载中...</div>
+            </div>
+
+            <div class="flex space-x-3 pt-6 border-t mt-6">
+                <button onclick="hideQuotaModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">关闭</button>
+                <button onclick="confirmResetAllQuota()" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">重置所有配额</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script>
+        let plans = [];
+        let plansMap = {};
+        let currentPage = 1;
+        let pageSize = 25;
+        let allKeys = [];
+        let keyStatsMap = {};
+        let currentQuotaKeyID = null;
+
+        function getProgressClass(percent) {
+            if (percent < 70) return 'progress-green';
+            if (percent < 90) return 'progress-yellow';
+            return 'progress-red';
+        }
+
+        function loadPlans() {
+            $.get('/admin/api/plans', function(data) {
+                plans = data || [];
+                plansMap = {};
+                plans.forEach(p => {
+                    plansMap[p.id] = p;
+                });
+                updatePlanSelect();
+            }).fail(function() {
+                console.error('加载套餐失败');
+            });
+        }
+
+        function updatePlanSelect() {
+            const select = $('#planSelect');
+            if (plans.length > 0) {
+                const activePlans = plans.filter(p => p.is_active);
+                select.html(activePlans.map(p => 
+                    `<option value="${p.id}">${p.name} - ${p.code}</option>`
+                ).join(''));
+                showPlanDetails();
+            } else {
+                select.html('<option value="">暂无可用套餐</option>');
+            }
+        }
+
+        function toggleConfigMode() {
+            const mode = $('input[name="configMode"]:checked').val();
+            if (mode === 'plan') {
+                $('#planSection').removeClass('hidden');
+                $('#customSection').addClass('hidden');
+            } else {
+                $('#planSection').addClass('hidden');
+                $('#customSection').removeClass('hidden');
+            }
+        }
+
+        function showPlanDetails() {
+            const planId = $('#planSelect').val();
+            const plan = plansMap[planId];
+            if (plan) {
+                const formatLimit = (val) => val > 0 ? val.toLocaleString() : '无限制';
+                const details = `
+                    <div class="font-semibold mb-2">${plan.name}套餐限制：</div>
+                    ${plan.description ? `<div class="text-xs text-gray-600 mb-2">${plan.description}</div>` : ''}
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>每分钟: ${formatLimit(plan.minute_limit)}</div>
+                        <div>每日: ${formatLimit(plan.daily_limit)}</div>
+                        <div>每周: ${formatLimit(plan.weekly_limit)}</div>
+                        <div>每月: ${formatLimit(plan.monthly_limit)}</div>
+                    </div>
+                `;
+                $('#planDetails').html(details);
+            }
+        }
+
+        function showCreateModal() {
+            $('#createForm')[0].reset();
+            $('input[name="configMode"][value="plan"]').prop('checked', true);
+            toggleConfigMode();
+            loadPlans();
+            $('#modal').removeClass('hidden');
+        }
+
+        function hideModal() {
+            $('#modal').addClass('hidden');
+        }
+
+        function changePageSize() {
+            pageSize = parseInt($('#pageSize').val());
+            currentPage = 1;
+            renderTable();
+        }
+
+        function loadKeyStats() {
+            $.get('/admin/api/key-stats-detail', function(stats) {
+                keyStatsMap = {};
+                (stats || []).forEach(stat => {
+                    keyStatsMap[stat.api_key_id] = stat;
+                });
+            });
+        }
+
+        function loadKeys() {
+            $.get('/admin/api/keys', function(keys) {
+                allKeys = keys || [];
+                loadKeyStats();
+                setTimeout(renderTable, 100);
+            }).fail(function(xhr, status, error) {
+                console.error('获取密钥列表失败:', xhr.responseText);
+                $('#keysTable').html(`<tr><td colspan="7" class="text-center py-8 text-red-500">加载失败: ${xhr.responseJSON?.error || xhr.responseText || error}</td></tr>`);
+            });
+        }
+
+        function renderTable() {
+            const tbody = $('#keysTable');
+            const start = (currentPage - 1) * pageSize;
+            const end = pageSize === 99999 ? allKeys.length : start + pageSize;
+            const pageKeys = allKeys.slice(start, end);
+
+            if (pageKeys.length > 0) {
+                tbody.html(pageKeys.map(key => {
+                    const plan = key.plan_id ? plansMap[key.plan_id] : null;
+                    const stat = keyStatsMap[key.id];
+                    const dailyLimit = stat?.limits?.daily;
+                    
+                    let usageHTML = `<div class="text-xs text-gray-600">总计: ${key.total_used}</div>`;
+                    
+                    if (stat && dailyLimit) {
+                        const percent = Math.min(dailyLimit.percent, 100);
+                        const progressClass = getProgressClass(percent);
+                        usageHTML = `
+                            <div class="space-y-1" style="min-width: 150px;">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-gray-600">今日: ${dailyLimit.used} / ${dailyLimit.limit}</span>
+                                    <span class="font-medium">${percent.toFixed(1)}%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress ${progressClass}" style="width: ${percent}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (key.total_limit > 0) {
+                        const totalPercent = (key.total_used / key.total_limit * 100).toFixed(1);
+                        usageHTML = `
+                            <div class="text-sm text-gray-600">
+                                ${key.total_used} / ${key.total_limit}
+                                <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: ${Math.min(totalPercent, 100)}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    let planBadge = '';
+                    if (key.is_custom) {
+                        planBadge = '<span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">自定义</span>';
+                    } else if (plan) {
+                        planBadge = `<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">${plan.name}</span>`;
+                    } else {
+                        planBadge = `<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">${key.plan || '未知'}</span>`;
+                    }
+                    
+                    return `
+                    <tr class="hover:bg-blue-50">
+                        <td class="px-6 py-4"><input type="checkbox" class="key-checkbox" value="${key.id}"></td>
+                        <td class="px-6 py-4 font-medium text-gray-900">${key.name}</td>
+                        <td class="px-6 py-4">
+                            <code class="bg-gray-100 px-2 py-1 rounded text-sm">${key.key.substring(0, 20)}...</code>
+                            <button onclick="copyKey('${key.key}')" class="ml-2 text-blue-600 hover:text-blue-700">
+                                <span class="iconify" data-icon="material-symbols:content-copy"></span>
+                            </button>
+                        </td>
+                        <td class="px-6 py-4">
+                            ${planBadge}
+                        </td>
+                        <td class="px-6 py-4">${usageHTML}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded text-xs ${key.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}">
+                                ${key.status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <button onclick="showQuotaModal(${key.id}, '${key.name}')" class="text-blue-600 hover:text-blue-700 mr-3">配额</button>
+                            <button onclick="toggleStatus(${key.id}, '${key.status}')" class="text-yellow-600 hover:text-yellow-700 mr-3">
+                                ${key.status === 'active' ? '禁用' : '启用'}
+                            </button>
+                            <button onclick="deleteKey(${key.id})" class="text-red-600 hover:text-red-700">删除</button>
+                        </td>
+                    </tr>
+                `}).join(''));
+            } else {
+                tbody.html('<tr><td colspan="7" class="text-center py-8 text-gray-400">暂无数据</td></tr>');
+            }
+
+            renderPagination();
+            updateBatchActions();
+        }
+
+        function renderPagination() {
+            if (pageSize === 99999) {
+                $('#pagination').html('');
+                return;
+            }
+
+            const totalPages = Math.ceil(allKeys.length / pageSize);
+            let html = '<div class="flex gap-2">';
+            
+            if (currentPage > 1) {
+                html += `<button onclick="changePage(${currentPage - 1})" class="px-3 py-1 border rounded hover:bg-gray-100">上一页</button>`;
+            }
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === currentPage) {
+                    html += `<button class="px-3 py-1 border rounded bg-blue-600 text-white">${i}</button>`;
+                } else if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
+                    html += `<button onclick="changePage(${i})" class="px-3 py-1 border rounded hover:bg-gray-100">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span class="px-3 py-1">...</span>`;
+                }
+            }
+            
+            if (currentPage < totalPages) {
+                html += `<button onclick="changePage(${currentPage + 1})" class="px-3 py-1 border rounded hover:bg-gray-100">下一页</button>`;
+            }
+            
+            html += '</div>';
+            $('#pagination').html(html);
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            renderTable();
+        }
+
+        function toggleSelectAll() {
+            const checked = $('#selectAll').prop('checked');
+            $('.key-checkbox').prop('checked', checked);
+            updateBatchActions();
+        }
+
+        function updateBatchActions() {
+            const selected = $('.key-checkbox:checked').length;
+            if (selected > 0) {
+                $('#batchActions').removeClass('hidden');
+            } else {
+                $('#batchActions').addClass('hidden');
+            }
+        }
+
+        $(document).on('change', '.key-checkbox', updateBatchActions);
+
+        function getSelectedIDs() {
+            return $('.key-checkbox:checked').map(function() { return parseInt($(this).val()); }).get();
+        }
+
+        function batchDelete() {
+            const ids = getSelectedIDs();
+            if (ids.length === 0) return;
+            if (!confirm(`确定删除选中的 ${ids.length} 个密钥?`)) return;
+
+            $.ajax({
+                url: '/admin/api/keys/batch-delete',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ids: ids}),
+                success: () => {
+                    alert('批量删除成功');
+                    loadKeys();
+                },
+                error: () => alert('批量删除失败')
+            });
+        }
+
+        function batchStatus(status) {
+            const ids = getSelectedIDs();
+            if (ids.length === 0) return;
+
+            $.ajax({
+                url: '/admin/api/keys/batch-status',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ids: ids, status: status}),
+                success: () => {
+                    alert('批量更新成功');
+                    loadKeys();
+                },
+                error: () => alert('批量更新失败')
+            });
+        }
+
+        $('#createForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            const mode = $('input[name="configMode"]:checked').val();
+            let data = {
+                name: $('#name').val(),
+                total_limit: parseInt($('#totalLimit').val())
+            };
+
+            if (mode === 'plan') {
+                const planId = parseInt($('#planSelect').val());
+                if (!planId) {
+                    alert('请选择套餐');
+                    return;
+                }
+                data.plan_id = planId;
+            } else {
+                data.minute_limit = parseInt($('#customMinuteLimit').val());
+                data.daily_limit = parseInt($('#customDailyLimit').val());
+                data.weekly_limit = parseInt($('#customWeeklyLimit').val());
+                data.monthly_limit = parseInt($('#customMonthlyLimit').val());
+            }
+
+            $.ajax({
+                url: '/admin/api/keys',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function() {
+                    hideModal();
+                    loadKeys();
+                },
+                error: function(xhr) {
+                    alert('创建失败: ' + (xhr.responseJSON?.error || '未知错误'));
+                }
+            });
+        });
+
+        function copyKey(key) {
+            const textarea = document.createElement('textarea');
+            textarea.value = key;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                alert('已复制到剪贴板');
+            } catch (err) {
+                alert('复制失败: ' + err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function toggleStatus(id, status) {
+            $.ajax({
+                url: `/admin/api/keys/${id}`,
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({status: status === 'active' ? 'inactive' : 'active'}),
+                success: loadKeys
+            });
+        }
+
+        function deleteKey(id) {
+            if (confirm('确定删除?')) {
+                $.ajax({url: `/admin/api/keys/${id}`, method: 'DELETE', success: loadKeys});
+            }
+        }
+
+        function showQuotaModal(keyID, keyName) {
+            currentQuotaKeyID = keyID;
+            $('#quotaKeyName').text(keyName);
+            $('#quotaModal').removeClass('hidden');
+            loadQuotaDetails(keyID);
+        }
+
+        function hideQuotaModal() {
+            $('#quotaModal').addClass('hidden');
+            currentQuotaKeyID = null;
+        }
+
+        function loadQuotaDetails(keyID) {
+            $('#quotaContent').html('<div class="text-center py-4">加载中...</div>');
+            
+            $.get(`/admin/api/keys/${keyID}/quota`, function(quota) {
+                let html = '<table class="w-full border">';
+                html += '<thead><tr class="bg-gray-50"><th class="border px-4 py-2">类型</th><th class="border px-4 py-2">已用/限额</th><th class="border px-4 py-2">剩余</th><th class="border px-4 py-2">重置时间</th><th class="border px-4 py-2">操作</th></tr></thead>';
+                html += '<tbody>';
+                
+                const quotaTypes = [
+                    {key: 'minute', name: '每分钟'},
+                    {key: 'daily', name: '每日'},
+                    {key: 'weekly', name: '每周'},
+                    {key: 'monthly', name: '每月'},
+                    {key: 'total', name: '总计'}
+                ];
+                
+                quotaTypes.forEach(type => {
+                    const q = quota[type.key];
+                    if (q) {
+                        const percent = q.limit > 0 ? (q.used / q.limit * 100).toFixed(1) : 0;
+                        let resetInfo = q.reset_in ? `${Math.ceil(q.reset_in / 60)} 分钟后` : '无';
+                        if (q.reset_at) {
+                            resetInfo = q.reset_at;
+                        }
+                        
+                        html += `<tr>
+                            <td class="border px-4 py-2">${type.name}</td>
+                            <td class="border px-4 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span>${q.used} / ${q.limit}</span>
+                                    <span class="text-sm text-gray-500">(${percent}%)</span>
+                                </div>
+                                <div class="progress-bar mt-1">
+                                    <div class="progress ${getProgressClass(percent)}" style="width: ${Math.min(percent, 100)}%"></div>
+                                </div>
+                            </td>
+                            <td class="border px-4 py-2">${q.remaining}</td>
+                            <td class="border px-4 py-2 text-sm">${resetInfo}</td>
+                            <td class="border px-4 py-2">
+                                <button onclick="resetQuota('${type.key}')" class="text-blue-600 hover:text-blue-700 text-sm">重置</button>
+                            </td>
+                        </tr>`;
+                    }
+                });
+                
+                html += '</tbody></table>';
+                $('#quotaContent').html(html);
+            }).fail(function() {
+                $('#quotaContent').html('<div class="text-center py-4 text-red-500">加载失败</div>');
+            });
+        }
+
+        function resetQuota(quotaType) {
+            if (!currentQuotaKeyID) return;
+            if (!confirm(`确定要重置${quotaType}配额吗?`)) return;
+            
+            $.ajax({
+                url: `/admin/api/keys/${currentQuotaKeyID}/reset-quota`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({quota_type: quotaType}),
+                success: function() {
+                    alert('配额重置成功');
+                    loadQuotaDetails(currentQuotaKeyID);
+                    loadKeys();
+                },
+                error: function(xhr) {
+                    alert('重置失败: ' + (xhr.responseJSON?.error || '未知错误'));
+                }
+            });
+        }
+
+        function confirmResetAllQuota() {
+            if (!currentQuotaKeyID) return;
+            if (!confirm('确定要重置所有配额吗? 此操作不可恢复!')) return;
+            
+            $.ajax({
+                url: `/admin/api/keys/${currentQuotaKeyID}/reset-quota`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({quota_type: 'all'}),
+                success: function() {
+                    alert('所有配额重置成功');
+                    loadQuotaDetails(currentQuotaKeyID);
+                    loadKeys();
+                },
+                error: function(xhr) {
+                    alert('重置失败: ' + (xhr.responseJSON?.error || '未知错误'));
+                }
+            });
+        }
+
+        loadPlans();
+        loadKeys();
+    </script>
+</body>
+</html>

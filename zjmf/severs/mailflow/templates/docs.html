@@ -1,0 +1,471 @@
+<style>
+.mailflow-card {
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.mailflow-card-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 2px solid #e9ecef;
+    border-radius: 6px 6px 0 0;
+}
+
+.mailflow-card-header h6 {
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+}
+
+.mailflow-card-body {
+    padding: 20px;
+}
+
+.code-block {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    overflow-x: auto;
+    margin: 15px 0;
+    position: relative;
+}
+
+.code-block pre {
+    margin: 0;
+    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #333;
+}
+
+.code-block .keyword {
+    color: #0033b3;
+    font-weight: bold;
+}
+
+.code-block .string {
+    color: #067d17;
+}
+
+.code-block .comment {
+    color: #8c8c8c;
+    font-style: italic;
+}
+
+.alert-info {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.section-title {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e9ecef;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #495057;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-title:first-child {
+    margin-top: 0;
+}
+
+.section-title:hover {
+    color: #007bff;
+}
+
+.section-title .toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.section-title.collapsed .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+.code-section {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.code-section.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+}
+
+.btn-copy-code {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+}
+
+.api-endpoint {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 10px 15px;
+    font-family: 'Courier New', 'Consolas', monospace;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.api-method {
+    background: #28a745;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.param-table {
+    width: 100%;
+    margin: 15px 0;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.param-table th {
+    background: #f8f9fa;
+    padding: 10px;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+    font-size: 0.9rem;
+}
+
+.param-table td {
+    padding: 10px;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 0.9rem;
+}
+
+.param-table tr:last-child td {
+    border-bottom: none;
+}
+
+.param-required {
+    color: #dc3545;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+</style>
+
+<div class="container-fluid">
+    <div class="card shadow mb-4 mailflow-card">
+        <div class="card-header mailflow-card-header">
+            <h6 class="m-0">
+                <i class="fas fa-book-open mr-2"></i>使用文档
+            </h6>
+        </div>
+        <div class="card-body mailflow-card-body">
+            <div class="alert-info">
+                <i class="fas fa-info-circle mr-1"></i>
+                <strong>提示：</strong> 以下示例代码中的 API Key 和端点地址已自动填入，可直接复制使用。
+            </div>
+
+            <!-- API 端点说明 -->
+            <div class="section-title">
+                <i class="fas fa-plug mr-2"></i>API 端点
+            </div>
+            <div class="api-endpoint">
+                <span class="api-method">POST</span>
+                <code>{$api_url}/api/v1/send</code>
+            </div>
+
+            <!-- 请求参数 -->
+            <div class="section-title">
+                <i class="fas fa-list-ul mr-2"></i>请求参数
+            </div>
+            <table class="param-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">参数名</th>
+                        <th style="width: 15%;">类型</th>
+                        <th style="width: 15%;">必填</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>to</code></td>
+                        <td>array</td>
+                        <td><span class="param-required">是</span></td>
+                        <td>收件人邮箱地址数组</td>
+                    </tr>
+                    <tr>
+                        <td><code>subject</code></td>
+                        <td>string</td>
+                        <td><span class="param-required">是</span></td>
+                        <td>邮件主题</td>
+                    </tr>
+                    <tr>
+                        <td><code>html</code></td>
+                        <td>string</td>
+                        <td>否</td>
+                        <td>HTML 格式邮件内容</td>
+                    </tr>
+                    <tr>
+                        <td><code>text</code></td>
+                        <td>string</td>
+                        <td>否</td>
+                        <td>纯文本格式邮件内容</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="text-muted" style="font-size: 0.9rem;">
+                <i class="fas fa-exclamation-circle mr-1"></i>
+                注意：<code>html</code> 和 <code>text</code> 至少需要提供一个
+            </p>
+
+            <!-- Python 示例 -->
+            <div class="section-title collapsed" onclick="toggleSection(this)">
+                <span><i class="fab fa-python mr-2"></i>Python 示例</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="code-section collapsed" style="max-height: 0; opacity: 0;">
+            <div class="code-block">
+                <button class="btn btn-sm btn-outline-secondary btn-copy-code" onclick="copyCode(this)">
+                    <i class="fas fa-copy mr-1"></i>复制
+                </button>
+<pre>import requests
+
+# API 配置
+url = "{$api_url}/api/v1/send"
+api_key = "{$api_key}"
+
+# 请求头
+headers = {
+    "X-API-Key": api_key,
+    "Content-Type": "application/json"
+}
+
+# 邮件数据
+data = {
+    "to": ["recipient@example.com"],
+    "subject": "测试邮件",
+    "html": "&lt;h1&gt;您好！&lt;/h1&gt;&lt;p&gt;这是一封测试邮件。&lt;/p&gt;",
+    "text": "您好！这是一封测试邮件。"
+}
+
+# 发送请求
+response = requests.post(url, json=data, headers=headers)
+
+# 处理响应
+if response.status_code == 200:
+    result = response.json()
+    print("发送成功:", result)
+else:
+    print("发送失败:", response.status_code, response.text)</pre>
+            </div>
+            </div>
+
+            <!-- cURL 示例 -->
+            <div class="section-title collapsed" onclick="toggleSection(this)">
+                <span><i class="fas fa-terminal mr-2"></i>cURL 示例</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="code-section collapsed" style="max-height: 0; opacity: 0;">
+            <div class="code-block">
+                <button class="btn btn-sm btn-outline-secondary btn-copy-code" onclick="copyCode(this)">
+                    <i class="fas fa-copy mr-1"></i>复制
+                </button>
+<pre>curl -X POST {$api_url}/api/v1/send \
+  -H "X-API-Key: {$api_key}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": ["recipient@example.com"],
+    "subject": "测试邮件",
+    "html": "&lt;h1&gt;您好！&lt;/h1&gt;&lt;p&gt;这是一封测试邮件。&lt;/p&gt;",
+    "text": "您好！这是一封测试邮件。"
+  }'</pre>
+            </div>
+            </div>
+
+            <!-- PHP 示例 -->
+            <div class="section-title collapsed" onclick="toggleSection(this)">
+                <span><i class="fab fa-php mr-2"></i>PHP 示例</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="code-section collapsed" style="max-height: 0; opacity: 0;">
+            <div class="code-block">
+                <button class="btn btn-sm btn-outline-secondary btn-copy-code" onclick="copyCode(this)">
+                    <i class="fas fa-copy mr-1"></i>复制
+                </button>
+<pre>&lt;?php
+// API 配置
+$url = "{$api_url}/api/v1/send";
+$apiKey = "{$api_key}";
+
+// 邮件数据
+$data = [
+    'to' => ['recipient@example.com'],
+    'subject' => '测试邮件',
+    'html' => '&lt;h1&gt;您好！&lt;/h1&gt;&lt;p&gt;这是一封测试邮件。&lt;/p&gt;',
+    'text' => '您好！这是一封测试邮件。'
+];
+
+// 初始化 cURL
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'X-API-Key: ' . $apiKey,
+    'Content-Type: application/json'
+]);
+
+// 发送请求
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+// 处理响应
+if ($httpCode == 200) {
+    $result = json_decode($response, true);
+    echo "发送成功: " . print_r($result, true);
+} else {
+    echo "发送失败: HTTP $httpCode - $response";
+}
+?&gt;</pre>
+            </div>
+            </div>
+
+            <!-- Node.js 示例 -->
+            <div class="section-title collapsed" onclick="toggleSection(this)">
+                <span><i class="fab fa-node-js mr-2"></i>Node.js 示例</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="code-section collapsed" style="max-height: 0; opacity: 0;">
+            <div class="code-block">
+                <button class="btn btn-sm btn-outline-secondary btn-copy-code" onclick="copyCode(this)">
+                    <i class="fas fa-copy mr-1"></i>复制
+                </button>
+<pre>const axios = require('axios');
+
+// API 配置
+const url = '{$api_url}/api/v1/send';
+const apiKey = '{$api_key}';
+
+// 邮件数据
+const data = {
+    to: ['recipient@example.com'],
+    subject: '测试邮件',
+    html: '&lt;h1&gt;您好！&lt;/h1&gt;&lt;p&gt;这是一封测试邮件。&lt;/p&gt;',
+    text: '您好！这是一封测试邮件。'
+};
+
+// 发送请求
+axios.post(url, data, {
+    headers: {
+        'X-API-Key': apiKey,
+        'Content-Type': 'application/json'
+    }
+})
+.then(response => {
+    console.log('发送成功:', response.data);
+})
+.catch(error => {
+    console.error('发送失败:', error.response?.data || error.message);
+});</pre>
+            </div>
+            </div>
+
+            <!-- 响应示例 -->
+            <div class="section-title collapsed" onclick="toggleSection(this)">
+                <span><i class="fas fa-check-circle mr-2"></i>成功响应示例</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="code-section collapsed" style="max-height: 0; opacity: 0;">
+            <div class="code-block">
+<pre>{
+    "message": "邮件已加入发送队列",
+    "count": 1
+}</pre>
+            </div>
+            </div>
+
+            <!-- 错误响应 -->
+            <div class="section-title collapsed" onclick="toggleSection(this)">
+                <span><i class="fas fa-exclamation-triangle mr-2"></i>错误响应示例</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="code-section collapsed" style="max-height: 0; opacity: 0;">
+            <div class="code-block">
+<pre>{
+    "error": "配额已用尽"
+}</pre>
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleSection(titleElement) {
+    const section = titleElement.nextElementSibling;
+    const icon = titleElement.querySelector('.toggle-icon');
+    
+    if (section.classList.contains('collapsed')) {
+        // 展开
+        section.classList.remove('collapsed');
+        section.style.maxHeight = section.scrollHeight + 'px';
+        section.style.opacity = '1';
+        titleElement.classList.remove('collapsed');
+    } else {
+        // 折叠
+        section.classList.add('collapsed');
+        section.style.maxHeight = '0';
+        section.style.opacity = '0';
+        titleElement.classList.add('collapsed');
+    }
+}
+
+function copyCode(button) {
+    const codeBlock = button.parentElement;
+    const pre = codeBlock.querySelector('pre');
+    const text = pre.textContent;
+    
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    
+    try {
+        document.execCommand('copy');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check mr-1"></i>已复制';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 2000);
+    } catch (err) {
+        alert('复制失败，请手动复制');
+    }
+    
+    document.body.removeChild(textarea);
+}
+</script>
+

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发送日志 - MailFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-white min-h-screen">
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">MailFlow</h1>
+                    <div class="flex space-x-1">
+                        <a href="/admin" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:dashboard"></span> 仪表盘
+                        </a>
+                        <a href="/admin/keys" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:key"></span> API密钥
+                        </a>
+                        <a href="/admin/smtp" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:mail"></span> SMTP
+                        </a>
+                        <a href="/admin/plans" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:package"></span> 套餐
+                        </a>
+                        <a href="/admin/admin-tokens" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:admin-panel-settings"></span> Token
+                        </a>
+                        <a href="/admin/logs" class="px-4 py-2 rounded bg-blue-50 text-blue-600 font-medium flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:description"></span> 日志
+                        </a>
+                        <a href="/admin/stats" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:analytics"></span> 统计
+                        </a>
+                    </div>
+                </div>
+                <a href="/admin/logout" class="text-gray-600 hover:text-red-600 flex items-center gap-1">
+                    <span class="iconify" data-icon="material-symbols:logout"></span> 退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-gray-800 mb-8">发送日志</h2>
+        
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex space-x-4">
+                <select id="statusFilter" onchange="loadLogs(1)" class="px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                    <option value="">全部状态</option>
+                    <option value="success">成功</option>
+                    <option value="failed">失败</option>
+                </select>
+                <button onclick="loadLogs(1)" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded flex items-center gap-2">
+                    <span class="iconify" data-icon="material-symbols:refresh"></span> 刷新
+                </button>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-600">每页显示：</span>
+                <select id="pageSize" onchange="loadLogs(1)" class="border rounded px-3 py-1 text-sm outline-none">
+                    <option value="25">25</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-md shadow overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr class="text-left text-gray-600">
+                        <th class="px-6 py-4">收件人</th>
+                        <th class="px-6 py-4">主题</th>
+                        <th class="px-6 py-4">状态</th>
+                        <th class="px-6 py-4">错误信息</th>
+                        <th class="px-6 py-4">时间</th>
+                    </tr>
+                </thead>
+                <tbody id="logsTable" class="divide-y divide-gray-200">
+                    <tr><td colspan="5" class="text-center py-8 text-gray-400">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="pagination" class="flex justify-center space-x-2 mt-6"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script>
+        let currentPage = 1;
+
+        function loadLogs(page) {
+            currentPage = page;
+            const status = $('#statusFilter').val();
+            const pageSize = $('#pageSize').val() || 25;
+            let url = `/admin/api/logs?page=${page}&page_size=${pageSize}`;
+            if (status) url += `&status=${status}`;
+
+            $.get(url, function(result) {
+                const tbody = $('#logsTable');
+                if (result.data && result.data.length > 0) {
+                    tbody.html(result.data.map(log => `
+                        <tr class="hover:bg-blue-50">
+                            <td class="px-6 py-4">${log.to}</td>
+                            <td class="px-6 py-4">${log.subject || '-'}</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 rounded text-xs ${log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                                    ${log.status}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-red-600">
+                                <div class="max-w-md break-words" title="${(log.error_msg || '-').replace(/"/g, '&quot;')}">${log.error_msg || '-'}</div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500">${new Date(log.created_at).toLocaleString('zh-CN')}</td>
+                        </tr>
+                    `).join(''));
+                    renderPagination(result.total, result.page, result.page_size);
+                } else {
+                    tbody.html('<tr><td colspan="5" class="text-center py-8 text-gray-400">暂无数据</td></tr>');
+                }
+            }).fail(function(xhr, status, error) {
+                console.error('获取日志失败:', xhr.responseText);
+                $('#logsTable').html(`<tr><td colspan="5" class="text-center py-8 text-red-500">加载失败: ${xhr.responseJSON?.error || xhr.responseText || error}</td></tr>`);
+            });
+        }
+
+        function renderPagination(total, page, pageSize) {
+            const totalPages = Math.ceil(total / pageSize);
+            if (totalPages <= 1) {
+                $('#pagination').html('');
+                return;
+            }
+
+            let html = '';
+            if (page > 1) {
+                html += `<button onclick="loadLogs(${page - 1})" class="px-4 py-2 bg-white border rounded hover:bg-gray-50">上一页</button>`;
+            }
+
+            const start = Math.max(1, page - 2);
+            const end = Math.min(totalPages, page + 2);
+
+            for (let i = start; i <= end; i++) {
+                html += `<button onclick="loadLogs(${i})" class="px-4 py-2 ${i === page ? 'bg-blue-600 text-white' : 'bg-white border hover:bg-gray-50'} rounded">${i}</button>`;
+            }
+
+            if (page < totalPages) {
+                html += `<button onclick="loadLogs(${page + 1})" class="px-4 py-2 bg-white border rounded hover:bg-gray-50">下一页</button>`;
+            }
+
+            $('#pagination').html(html);
+        }
+
+        loadLogs(1);
+        setInterval(() => loadLogs(currentPage), 30000);
+    </script>
+</body>
+</html>

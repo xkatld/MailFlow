@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统计报表 - MailFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+        .progress { height: 100%; transition: width 0.3s; }
+        .progress-green { background: #22c55e; }
+        .progress-yellow { background: #eab308; }
+        .progress-red { background: #ef4444; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-white min-h-screen">
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">MailFlow</h1>
+                    <div class="flex space-x-1">
+                        <a href="/admin" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:dashboard"></span> 仪表盘
+                        </a>
+                        <a href="/admin/keys" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:key"></span> API密钥
+                        </a>
+                        <a href="/admin/smtp" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:mail"></span> SMTP
+                        </a>
+                        <a href="/admin/plans" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:package"></span> 套餐
+                        </a>
+                        <a href="/admin/admin-tokens" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:admin-panel-settings"></span> Token
+                        </a>
+                        <a href="/admin/logs" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:description"></span> 日志
+                        </a>
+                        <a href="/admin/stats" class="px-4 py-2 rounded bg-blue-50 text-blue-600 font-medium flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:analytics"></span> 统计
+                        </a>
+                    </div>
+                </div>
+                <a href="/admin/logout" class="text-gray-600 hover:text-red-600 flex items-center gap-1">
+                    <span class="iconify" data-icon="material-symbols:logout"></span> 退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-gray-800 mb-8">统计报表</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-md shadow p-6">
+                <p class="text-gray-600 text-sm mb-2">今日总量</p>
+                <p id="todayTotal" class="text-3xl font-bold text-gray-900">-</p>
+            </div>
+            <div class="bg-white rounded-md shadow p-6">
+                <p class="text-gray-600 text-sm mb-2">今日成功</p>
+                <p id="todaySuccess" class="text-3xl font-bold text-gray-900">-</p>
+            </div>
+            <div class="bg-white rounded-md shadow p-6">
+                <p class="text-gray-600 text-sm mb-2">今日失败</p>
+                <p id="todayFailed" class="text-3xl font-bold text-gray-900">-</p>
+            </div>
+            <div class="bg-white rounded-md shadow p-6">
+                <p class="text-gray-600 text-sm mb-2">今日成功率</p>
+                <p id="successRate" class="text-3xl font-bold text-gray-900">-</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-md shadow p-6 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800">历史趋势</h3>
+                <div class="flex items-center space-x-4">
+                    <input type="date" id="startDate" class="px-3 py-2 border rounded">
+                    <span class="text-gray-600">至</span>
+                    <input type="date" id="endDate" class="px-3 py-2 border rounded">
+                    <button onclick="loadTrend()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded">查询</button>
+                </div>
+            </div>
+            <div style="height: 300px;"><canvas id="trendChart"></canvas></div>
+        </div>
+
+        <div class="bg-white rounded-md shadow p-6 mb-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">API密钥详细统计</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr class="text-left text-gray-600 text-sm">
+                            <th class="px-4 py-3">名称</th>
+                            <th class="px-4 py-3">今日</th>
+                            <th class="px-4 py-3">本周</th>
+                            <th class="px-4 py-3">本月</th>
+                            <th class="px-4 py-3">每日限额</th>
+                            <th class="px-4 py-3">每周限额</th>
+                            <th class="px-4 py-3">每月限额</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keyDetailTable" class="divide-y divide-gray-200 text-sm">
+                        <tr><td colspan="7" class="text-center py-8 text-gray-400">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-md shadow p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">SMTP服务器统计</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr class="text-left text-gray-600">
+                            <th class="px-6 py-4">SMTP名称</th>
+                            <th class="px-6 py-4">当前小时用量</th>
+                            <th class="px-6 py-4">小时限额</th>
+                            <th class="px-6 py-4">使用率</th>
+                            <th class="px-6 py-4">今日成功</th>
+                            <th class="px-6 py-4">今日失败</th>
+                            <th class="px-6 py-4">状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="smtpStatsTable" class="divide-y divide-gray-200">
+                        <tr><td colspan="7" class="text-center py-8 text-gray-400">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script>
+        let trendChart;
+
+        function setDefaultDates() {
+            const today = new Date();
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(today.getDate() - 7);
+            
+            $('#endDate').val(today.toISOString().split('T')[0]);
+            $('#startDate').val(sevenDaysAgo.toISOString().split('T')[0]);
+        }
+
+        function getProgressClass(percent) {
+            if (percent < 70) return 'progress-green';
+            if (percent < 90) return 'progress-yellow';
+            return 'progress-red';
+        }
+
+        function formatLimitProgress(limit) {
+            if (!limit) return '<span class="text-gray-400">未设置</span>';
+            const percent = Math.min(limit.percent, 100);
+            const progressClass = getProgressClass(percent);
+            return `
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs">
+                        <span>${limit.used} / ${limit.limit}</span>
+                        <span class="font-medium">${percent.toFixed(1)}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress ${progressClass}" style="width: ${percent}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function loadBasicStats() {
+            $.get('/admin/api/stats/period?type=today', function(data) {
+                $('#todayTotal').text(data.total || 0);
+                $('#todaySuccess').text(data.success || 0);
+                $('#todayFailed').text(data.failed || 0);
+                $('#successRate').text((data.success_rate || 0).toFixed(1) + '%');
+            });
+        }
+
+        function loadKeyDetailStats() {
+            $.get('/admin/api/key-stats-detail', function(keyStats) {
+                const tbody = $('#keyDetailTable');
+                if (keyStats && keyStats.length > 0) {
+                    tbody.html(keyStats.map(stat => {
+                        const todayTotal = (stat.today_success || 0) + (stat.today_failed || 0);
+                        return `
+                            <tr class="hover:bg-blue-50">
+                                <td class="px-4 py-3 font-medium">${stat.name}</td>
+                                <td class="px-4 py-3">${todayTotal}</td>
+                                <td class="px-4 py-3">${stat.week_total || 0}</td>
+                                <td class="px-4 py-3">${stat.month_total || 0}</td>
+                                <td class="px-4 py-3">${formatLimitProgress(stat.limits?.daily)}</td>
+                                <td class="px-4 py-3">${formatLimitProgress(stat.limits?.weekly)}</td>
+                                <td class="px-4 py-3">${formatLimitProgress(stat.limits?.monthly)}</td>
+                            </tr>
+                        `;
+                    }).join(''));
+                } else {
+                    tbody.html('<tr><td colspan="7" class="text-center py-8 text-gray-400">暂无数据</td></tr>');
+                }
+            });
+        }
+
+        function loadSMTPStats() {
+            $.get('/admin/api/smtp-stats', function(smtpStats) {
+                const tbody = $('#smtpStatsTable');
+                if (smtpStats && smtpStats.length > 0) {
+                    tbody.html(smtpStats.map(stat => {
+                        const percent = stat.usage_percent || 0;
+                        let statusClass = 'bg-green-100 text-green-700';
+                        if (stat.status === '已满') statusClass = 'bg-red-100 text-red-700';
+                        else if (stat.status === '接近限额') statusClass = 'bg-yellow-100 text-yellow-700';
+                        
+                        return `
+                            <tr class="hover:bg-blue-50">
+                                <td class="px-6 py-4 font-medium">${stat.name}</td>
+                                <td class="px-6 py-4">${stat.current_used || 0}</td>
+                                <td class="px-6 py-4">${stat.hourly_limit || 0}</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-24 progress-bar">
+                                            <div class="progress ${getProgressClass(percent)}" style="width: ${Math.min(percent, 100)}%"></div>
+                                        </div>
+                                        <span class="text-sm">${percent.toFixed(1)}%</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">${stat.today_sent || 0}</td>
+                                <td class="px-6 py-4">${stat.today_failed || 0}</td>
+                                <td class="px-6 py-4"><span class="px-3 py-1 rounded text-sm ${statusClass}">${stat.status}</span></td>
+                            </tr>
+                        `;
+                    }).join(''));
+                } else {
+                    tbody.html('<tr><td colspan="7" class="text-center py-8 text-gray-400">暂无数据</td></tr>');
+                }
+            });
+        }
+
+        function loadTrend() {
+            const startDate = $('#startDate').val();
+            const endDate = $('#endDate').val();
+            
+            if (!startDate || !endDate) {
+                alert('请选择开始和结束日期');
+                return;
+            }
+            
+            $.get(`/admin/api/trend?start=${startDate}&end=${endDate}`, function(data) {
+                const ctx = document.getElementById('trendChart');
+                
+                if (trendChart) trendChart.destroy();
+                
+                trendChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels || [],
+                        datasets: [{
+                            label: '发送成功',
+                            data: data.success || [],
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: '发送失败',
+                            data: data.failed || [],
+                            borderColor: 'rgb(239, 68, 68)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            }).fail(function(xhr) {
+                alert('加载趋势数据失败: ' + (xhr.responseJSON?.error || '未知错误'));
+            });
+        }
+
+        setDefaultDates();
+        loadBasicStats();
+        loadKeyDetailStats();
+        loadSMTPStats();
+        loadTrend();
+    </script>
+</body>
+</html>

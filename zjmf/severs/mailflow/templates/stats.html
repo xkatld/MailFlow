@@ -1,0 +1,283 @@
+<style>
+.mailflow-card {
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.mailflow-card-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 2px solid #e9ecef;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mailflow-card-header h6 {
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+}
+
+.mailflow-card-body {
+    padding: 20px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    padding: 20px;
+    background: #fff;
+    transition: box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card h6 {
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #212529;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.success-rate-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.rate-good {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.rate-medium {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.rate-bad {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.loading-container {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+.error-container {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid #f5c6cb;
+    margin: 20px 0;
+}
+
+.chart-container {
+    position: relative;
+    height: 200px;
+}
+</style>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<div class="container-fluid">
+    <div class="card shadow mailflow-card">
+        <div class="card-header mailflow-card-header">
+            <h6 class="m-0">
+                <i class="fas fa-chart-line mr-2"></i>使用统计
+            </h6>
+            <button class="btn btn-sm btn-secondary" onclick="loadStats()">
+                <i class="fas fa-sync-alt mr-1"></i>刷新数据
+            </button>
+        </div>
+        <div class="card-body mailflow-card-body">
+            <div id="statsContent">
+                <div class="loading-container">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>加载中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var currentStatsContainerId = '';
+var successChart = null;
+
+function loadStats() {
+    if (!currentStatsContainerId) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const containerId = urlParams.get('id');
+        if (!containerId) {
+            $('#statsContent').html('<div class="error-container"><i class="fas fa-exclamation-triangle mr-2"></i>无法获取产品ID</div>');
+            return;
+        }
+        currentStatsContainerId = containerId;
+    }
+
+    $('#statsContent').html('<div class="loading-container"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><p>加载中...</p></div>');
+    
+    const timestamp = new Date().getTime();
+    const url = `/provision/custom/content?id=${currentStatsContainerId}&key=stats&action=getstats&_t=${timestamp}`;
+    
+    $.ajax({
+        url: url,
+        method: 'GET',
+        dataType: 'json',
+        timeout: 10000,
+        cache: false,
+        success: function(response) {
+            if (response.code && response.code !== 200) {
+                $('#statsContent').html('<div class="error-container"><i class="fas fa-exclamation-triangle mr-2"></i>加载失败: ' + (response.msg || response.error || '未知错误') + '</div>');
+                return;
+            }
+            renderStats(response);
+        },
+        error: function(xhr, status, error) {
+            $('#statsContent').html('<div class="error-container"><i class="fas fa-exclamation-triangle mr-2"></i>加载失败: ' + error + '</div>');
+        }
+    });
+}
+
+function renderStats(data) {
+    const todaySent = data.today_sent || 0;
+    const todayFailed = data.today_failed || 0;
+    const todayTotal = todaySent + todayFailed;
+    const todayRate = todayTotal > 0 ? ((todaySent / todayTotal) * 100).toFixed(1) : 100;
+
+    const weekTotal = data.week_total || 0;
+    const monthTotal = data.month_total || 0;
+
+    let rateClass = 'rate-good';
+    if (todayRate < 85) rateClass = 'rate-bad';
+    else if (todayRate < 95) rateClass = 'rate-medium';
+
+    let html = '<div class="stats-grid">';
+    
+    html += '<div class="stat-card">';
+    html += '<h6><i class="fas fa-calendar-day mr-1"></i>今日发送</h6>';
+    html += '<div class="stat-value">' + todayTotal.toLocaleString() + '</div>';
+    html += '<div class="stat-label">成功: ' + todaySent.toLocaleString() + ' / 失败: ' + todayFailed.toLocaleString() + '</div>';
+    html += '</div>';
+
+    html += '<div class="stat-card">';
+    html += '<h6><i class="fas fa-calendar-week mr-1"></i>本周总计</h6>';
+    html += '<div class="stat-value">' + weekTotal.toLocaleString() + '</div>';
+    html += '<div class="stat-label">过去7天累计</div>';
+    html += '</div>';
+
+    html += '<div class="stat-card">';
+    html += '<h6><i class="fas fa-calendar-alt mr-1"></i>本月总计</h6>';
+    html += '<div class="stat-value">' + monthTotal.toLocaleString() + '</div>';
+    html += '<div class="stat-label">本月累计发送</div>';
+    html += '</div>';
+
+    html += '<div class="stat-card">';
+    html += '<h6><i class="fas fa-percentage mr-1"></i>今日成功率</h6>';
+    html += '<div class="stat-value"><span class="success-rate-badge ' + rateClass + '">' + todayRate + '%</span></div>';
+    html += '<div class="stat-label">发送成功率</div>';
+    html += '</div>';
+
+    html += '</div>';
+
+    html += '<div class="mailflow-card">';
+    html += '<div class="mailflow-card-header"><h6 class="m-0"><i class="fas fa-chart-pie mr-2"></i>成功率分布</h6></div>';
+    html += '<div class="mailflow-card-body">';
+    html += '<div class="chart-container"><canvas id="successChart"></canvas></div>';
+    html += '</div></div>';
+
+    $('#statsContent').html(html);
+
+    renderSuccessChart(todaySent, todayFailed);
+}
+
+function renderSuccessChart(sent, failed) {
+    const ctx = document.getElementById('successChart');
+    if (!ctx) return;
+
+    if (successChart) {
+        successChart.destroy();
+    }
+
+    successChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['成功', '失败'],
+            datasets: [{
+                data: [sent, failed],
+                backgroundColor: ['#28a745', '#dc3545'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 13
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+$(document).ready(function() {
+    // 等待 Chart.js 加载
+    const waitForChart = setInterval(function() {
+        if (typeof Chart !== 'undefined') {
+            clearInterval(waitForChart);
+            loadStats();
+            // 每30秒自动刷新
+            setInterval(loadStats, 30000);
+        }
+    }, 50);
+
+    // 5秒超时
+    setTimeout(function() {
+        clearInterval(waitForChart);
+    }, 5000);
+});
+</script>

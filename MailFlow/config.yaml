@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: password
+  dbname: mailflow
+  sslmode: disable
+
+redis:
+  addr: localhost:6379
+  password: ""
+  db: 0
+
+worker:
+  count: 5
+
+admin:
+  username: admin
+  password: changeme123
+

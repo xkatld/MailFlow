@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMTP配置 - MailFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .status-green { background: #22c55e; }
+        .status-yellow { background: #eab308; }
+        .status-red { background: #ef4444; }
+        .status-gray { background: #9ca3af; }
+        .progress-bar { width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+        .progress { height: 100%; transition: width 0.3s; }
+        .progress-green { background: #22c55e; }
+        .progress-yellow { background: #eab308; }
+        .progress-red { background: #ef4444; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-white min-h-screen">
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">MailFlow</h1>
+                    <div class="flex space-x-1">
+                        <a href="/admin" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:dashboard"></span> 仪表盘
+                        </a>
+                        <a href="/admin/keys" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:key"></span> API密钥
+                        </a>
+                        <a href="/admin/smtp" class="px-4 py-2 rounded bg-blue-50 text-blue-600 font-medium flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:mail"></span> SMTP
+                        </a>
+                        <a href="/admin/plans" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:package"></span> 套餐
+                        </a>
+                        <a href="/admin/admin-tokens" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:admin-panel-settings"></span> Token
+                        </a>
+                        <a href="/admin/logs" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:description"></span> 日志
+                        </a>
+                        <a href="/admin/stats" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:analytics"></span> 统计
+                        </a>
+                    </div>
+                </div>
+                <a href="/admin/logout" class="text-gray-600 hover:text-red-600 flex items-center gap-1">
+                    <span class="iconify" data-icon="material-symbols:logout"></span> 退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">SMTP配置管理</h2>
+            <div class="space-x-2">
+                <button onclick="showImportModal()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow flex items-center gap-2 inline-flex">
+                    <span class="iconify" data-icon="material-symbols:upload"></span> 批量导入
+                </button>
+                <button onclick="showCreateModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow flex items-center gap-2 inline-flex">
+                    <span class="iconify" data-icon="material-symbols:add"></span> 添加配置
+                </button>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+            <div id="batchActions" class="hidden space-x-2">
+                <button onclick="batchDelete()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">批量删除</button>
+                <button onclick="batchStatus('active')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">批量启用</button>
+                <button onclick="batchStatus('inactive')" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm">批量禁用</button>
+            </div>
+            <div class="flex items-center gap-2 ml-auto">
+                <span class="text-sm text-gray-600">每页显示：</span>
+                <select id="pageSize" onchange="changePageSize()" class="border rounded px-3 py-1 text-sm outline-none">
+                    <option value="25">25</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                    <option value="99999">全部</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-md shadow overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr class="text-left text-gray-600">
+                        <th class="px-6 py-4"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                        <th class="px-6 py-4">名称</th>
+                        <th class="px-6 py-4">SMTP服务器</th>
+                        <th class="px-6 py-4">优先级</th>
+                        <th class="px-6 py-4">健康状态</th>
+                        <th class="px-6 py-4">当前使用量</th>
+                        <th class="px-6 py-4">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="smtpTable" class="divide-y divide-gray-200">
+                    <tr><td colspan="7" class="text-center py-8 text-gray-400">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="pagination" class="mt-4 flex justify-center"></div>
+    </div>
+
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white rounded-md shadow-2xl w-full max-w-2xl p-8 m-4">
+            <h3 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-6">添加SMTP配置</h3>
+            <form id="smtpForm" class="space-y-4">
+                <input type="hidden" id="smtpId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">名称</label>
+                    <input type="text" id="name" required class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">SMTP服务器</label>
+                    <input type="text" id="host" required class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">端口</label>
+                    <select id="port" required class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        <option value="25">25</option>
+                        <option value="465">465</option>
+                        <option value="587" selected>587</option>
+                        <option value="2525">2525</option>
+                    </select></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">认证方式</label>
+                    <select id="authMethod" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        <option value="plain">PLAIN</option>
+                        <option value="xoauth2">XOAUTH2</option>
+                    </select></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">加密方式</label>
+                    <select id="encryption" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        <option value="starttls">STARTTLS/TLS</option>
+                        <option value="ssl">SSL</option>
+                        <option value="none">无</option>
+                    </select></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">优先级</label>
+                    <input type="number" id="priority" value="1" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
+                    <input type="text" id="username" required class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">密码</label>
+                    <input type="password" id="password" required class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">发件邮箱</label>
+                    <input type="email" id="fromEmail" required class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">发件人名称</label>
+                    <input type="text" id="fromName" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">每小时限制</label>
+                    <input type="number" id="maxPerHour" value="100" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">每日限制 (0=无限制)</label>
+                    <input type="number" id="maxPerDay" value="0" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"></div>
+                </div>
+                <div class="flex space-x-3 pt-4">
+                    <button type="button" onclick="hideModal()" class="flex-1 px-4 py-2 border rounded hover:bg-gray-50">取消</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="importModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-md shadow-2xl w-full max-w-3xl p-8 m-4 max-h-screen overflow-y-auto">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">批量导入SMTP配置</h3>
+            <div class="bg-gray-50 p-4 rounded mb-4 text-sm">
+                <div class="font-semibold mb-2">JSON格式示例：</div>
+                <pre class="bg-white p-3 rounded overflow-x-auto text-xs">[
+  {
+    "name": "Gmail-1",
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "username": "user@gmail.com",
+    "password": "your-app-password",
+    "auth_method": "plain",
+    "encryption": "starttls",
+    "from_email": "user@gmail.com",
+    "from_name": "Sender Name",
+    "priority": 3,
+    "max_per_hour": 100
+  },
+  {
+    "name": "Outlook-OAuth2",
+    "host": "smtp-mail.outlook.com",
+    "port": 587,
+    "username": "user@outlook.com",
+    "password": "your-oauth2-access-token",
+    "auth_method": "xoauth2",
+    "encryption": "starttls",
+    "from_email": "user@outlook.com",
+    "from_name": "Your Name",
+    "priority": 3,
+    "max_per_hour": 100
+  }
+]</pre>
+                <div class="text-sm text-gray-600 mt-2">
+                    <strong>auth_method:</strong> plain / xoauth2<br>
+                    <strong>encryption:</strong> starttls(或tls) / ssl / none
+                </div>
+            </div>
+            <textarea id="importJson" rows="10" class="w-full border rounded p-3 outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm" placeholder="粘贴JSON数据..."></textarea>
+            <div class="flex space-x-3 pt-4">
+                <button onclick="hideImportModal()" class="flex-1 px-4 py-2 border rounded hover:bg-gray-50">取消</button>
+                <button onclick="doImport()" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">开始导入</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script>
+        let currentPage = 1;
+        let pageSize = 25;
+        let allConfigs = [];
+        let smtpHealthMap = {};
+
+        function showCreateModal() {
+            $('#modalTitle').text('添加SMTP配置');
+            $('#smtpForm')[0].reset();
+            $('#smtpId').val('');
+            $('#modal').removeClass('hidden');
+        }
+
+        function showEditModal(config) {
+            $('#modalTitle').text('编辑SMTP配置');
+            $('#smtpId').val(config.id);
+            $('#name').val(config.name);
+            $('#host').val(config.host);
+            $('#port').val(config.port);
+            $('#authMethod').val(config.auth_method || 'plain');
+            $('#encryption').val(config.encryption || 'starttls');
+            $('#username').val(config.username);
+            $('#password').val(config.password);
+            $('#fromEmail').val(config.from_email);
+            $('#fromName').val(config.from_name);
+            $('#priority').val(config.priority);
+            $('#maxPerHour').val(config.max_per_hour);
+            $('#maxPerDay').val(config.max_per_day || 0);
+            $('#modal').removeClass('hidden');
+        }
+
+        function hideModal() {
+            $('#modal').addClass('hidden');
+        }
+
+        function showImportModal() {
+            $('#importJson').val('');
+            $('#importModal').removeClass('hidden');
+        }
+
+        function hideImportModal() {
+            $('#importModal').addClass('hidden');
+        }
+
+        function changePageSize() {
+            pageSize = parseInt($('#pageSize').val());
+            currentPage = 1;
+            renderTable();
+        }
+
+        function loadConfigs() {
+            $.get('/admin/api/smtp-configs', function(configs) {
+                allConfigs = configs || [];
+                loadHealthStatus();
+            }).fail(function(xhr, status, error) {
+                console.error('获取SMTP配置失败:', xhr.responseText);
+                $('#smtpTable').html(`<tr><td colspan="7" class="text-center py-8 text-red-500">加载失败: ${xhr.responseJSON?.error || xhr.responseText || error}</td></tr>`);
+            });
+        }
+
+        function loadHealthStatus() {
+            smtpHealthMap = {};
+            const promises = allConfigs.map(config => {
+                return $.get(`/admin/api/smtp-configs/${config.id}/health`)
+                    .done(health => {
+                        smtpHealthMap[config.id] = health;
+                    })
+                    .fail(() => {
+                        smtpHealthMap[config.id] = { error: true };
+                    });
+            });
+            Promise.all(promises).finally(() => {
+                renderTable();
+            });
+        }
+
+        function renderTable() {
+            const tbody = $('#smtpTable');
+            const start = (currentPage - 1) * pageSize;
+            const end = pageSize === 99999 ? allConfigs.length : start + pageSize;
+            const pageConfigs = allConfigs.slice(start, end);
+
+            function getStatusDot(status) {
+                const statusMap = {
+                    'active': 'status-green',
+                    'paused': 'status-gray',
+                    'failed': 'status-red'
+                };
+                return statusMap[status] || 'status-gray';
+            }
+
+            function getStatusText(status) {
+                const textMap = {
+                    'active': '正常',
+                    'paused': '已暂停',
+                    'failed': '故障'
+                };
+                return textMap[status] || status;
+            }
+
+            function getProgressClass(percent) {
+                if (percent < 70) return 'progress-green';
+                if (percent < 90) return 'progress-yellow';
+                return 'progress-red';
+            }
+
+            if (pageConfigs.length > 0) {
+                tbody.html(pageConfigs.map(config => {
+                    const health = smtpHealthMap[config.id] || {};
+                    const hourPercent = health.hour_limit > 0 ? (health.hour_count / health.hour_limit * 100) : 0;
+                    const dayPercent = health.day_limit > 0 ? (health.day_count / health.day_limit * 100) : 0;
+                    
+                    let usageHTML = '<div class="text-xs text-gray-500">加载中...</div>';
+                    if (!health.error) {
+                        usageHTML = `
+                            <div class="space-y-2" style="min-width: 180px;">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="text-gray-600">小时: ${health.hour_count || 0} / ${health.hour_limit || 0}</span>
+                                        <span class="font-medium">${hourPercent.toFixed(0)}%</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress ${getProgressClass(hourPercent)}" style="width: ${Math.min(hourPercent, 100)}%"></div>
+                                    </div>
+                                </div>
+                                ${health.day_limit > 0 ? `
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="text-gray-600">今日: ${health.day_count || 0} / ${health.day_limit}</span>
+                                        <span class="font-medium">${dayPercent.toFixed(0)}%</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress ${getProgressClass(dayPercent)}" style="width: ${Math.min(dayPercent, 100)}%"></div>
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }
+
+                    let healthHTML = `
+                        <div class="flex items-center">
+                            <span class="status-dot ${getStatusDot(config.status)}"></span>
+                            <span class="text-sm">${getStatusText(config.status)}</span>
+                        </div>
+                    `;
+                    if (health.failure_count > 0) {
+                        healthHTML += `<div class="text-xs text-red-600 mt-1">失败: ${health.failure_count}次</div>`;
+                    }
+                    if (health.last_checked_at) {
+                        healthHTML += `<div class="text-xs text-gray-500 mt-1">检查: ${new Date(health.last_checked_at).toLocaleString()}</div>`;
+                    }
+                    
+                    return `
+                    <tr class="hover:bg-blue-50">
+                        <td class="px-6 py-4"><input type="checkbox" class="smtp-checkbox" value="${config.id}"></td>
+                        <td class="px-6 py-4 font-medium text-gray-900">${config.name}</td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm">${config.host}:${config.port}</div>
+                            <div class="text-xs text-gray-500">${config.from_email}</div>
+                            ${config.auth_method === 'xoauth2' ? '<div class="text-xs text-blue-600">🔐 OAuth2</div>' : ''}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">P${config.priority}</span>
+                        </td>
+                        <td class="px-6 py-4">${healthHTML}</td>
+                        <td class="px-6 py-4">${usageHTML}</td>
+                        <td class="px-6 py-4 text-sm">
+                            <button onclick="testSMTP(${config.id})" class="text-green-600 hover:text-green-700 mr-2">测试</button>
+                            ${config.status === 'active' ? `
+                                <button onclick="pauseSMTP(${config.id})" class="text-yellow-600 hover:text-yellow-700 mr-2">暂停</button>
+                            ` : `
+                                <button onclick="resumeSMTP(${config.id})" class="text-green-600 hover:text-green-700 mr-2">恢复</button>
+                            `}
+                            <button onclick="resetQuota(${config.id})" class="text-blue-600 hover:text-blue-700 mr-2">重置</button>
+                            <button onclick='showEditModal(${JSON.stringify(config).replace(/'/g, "&apos;")})' class="text-blue-600 hover:text-blue-700 mr-2">编辑</button>
+                            <button onclick="deleteConfig(${config.id})" class="text-red-600 hover:text-red-700">删除</button>
+                        </td>
+                    </tr>
+                `}).join(''));
+            } else {
+                tbody.html('<tr><td colspan="7" class="text-center py-8 text-gray-400">暂无数据</td></tr>');
+            }
+
+            renderPagination();
+            updateBatchActions();
+        }
+
+        function renderPagination() {
+            if (pageSize === 99999) {
+                $('#pagination').html('');
+                return;
+            }
+
+            const totalPages = Math.ceil(allConfigs.length / pageSize);
+            let html = '<div class="flex gap-2">';
+            
+            if (currentPage > 1) {
+                html += `<button onclick="changePage(${currentPage - 1})" class="px-3 py-1 border rounded hover:bg-gray-100">上一页</button>`;
+            }
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === currentPage) {
+                    html += `<button class="px-3 py-1 border rounded bg-blue-600 text-white">${i}</button>`;
+                } else if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
+                    html += `<button onclick="changePage(${i})" class="px-3 py-1 border rounded hover:bg-gray-100">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span class="px-3 py-1">...</span>`;
+                }
+            }
+            
+            if (currentPage < totalPages) {
+                html += `<button onclick="changePage(${currentPage + 1})" class="px-3 py-1 border rounded hover:bg-gray-100">下一页</button>`;
+            }
+            
+            html += '</div>';
+            $('#pagination').html(html);
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            renderTable();
+        }
+
+        function toggleSelectAll() {
+            const checked = $('#selectAll').prop('checked');
+            $('.smtp-checkbox').prop('checked', checked);
+            updateBatchActions();
+        }
+
+        function updateBatchActions() {
+            const selected = $('.smtp-checkbox:checked').length;
+            if (selected > 0) {
+                $('#batchActions').removeClass('hidden');
+            } else {
+                $('#batchActions').addClass('hidden');
+            }
+        }
+
+        $(document).on('change', '.smtp-checkbox', updateBatchActions);
+
+        function getSelectedIDs() {
+            return $('.smtp-checkbox:checked').map(function() { return parseInt($(this).val()); }).get();
+        }
+
+        function batchDelete() {
+            const ids = getSelectedIDs();
+            if (ids.length === 0) return;
+            if (!confirm(`确定删除选中的 ${ids.length} 个配置?`)) return;
+
+            $.ajax({
+                url: '/admin/api/smtp-configs/batch-delete',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ids: ids}),
+                success: () => {
+                    alert('批量删除成功');
+                    loadConfigs();
+                },
+                error: () => alert('批量删除失败')
+            });
+        }
+
+        function batchStatus(status) {
+            const ids = getSelectedIDs();
+            if (ids.length === 0) return;
+
+            $.ajax({
+                url: '/admin/api/smtp-configs/batch-status',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ids: ids, status: status}),
+                success: () => {
+                    alert('批量更新成功');
+                    loadConfigs();
+                },
+                error: () => alert('批量更新失败')
+            });
+        }
+
+        function doImport() {
+            try {
+                const data = JSON.parse($('#importJson').val());
+                $.ajax({
+                    url: '/admin/api/smtp-configs/batch-import',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: (resp) => {
+                        alert(`批量导入成功，共导入 ${resp.count} 条配置`);
+                        hideImportModal();
+                        loadConfigs();
+                    },
+                    error: (xhr) => {
+                        alert('导入失败: ' + (xhr.responseJSON?.error || '未知错误'));
+                    }
+                });
+            } catch (e) {
+                alert('JSON格式错误: ' + e.message);
+            }
+        }
+
+        $('#smtpForm').on('submit', function(e) {
+            e.preventDefault();
+            const id = $('#smtpId').val();
+            const data = {
+                name: $('#name').val(),
+                host: $('#host').val(),
+                port: parseInt($('#port').val()),
+                auth_method: $('#authMethod').val(),
+                encryption: $('#encryption').val(),
+                username: $('#username').val(),
+                password: $('#password').val(),
+                from_email: $('#fromEmail').val(),
+                from_name: $('#fromName').val(),
+                priority: parseInt($('#priority').val()),
+                max_per_hour: parseInt($('#maxPerHour').val()),
+                max_per_day: parseInt($('#maxPerDay').val())
+            };
+
+            if (id) {
+                $.ajax({
+                    url: `/admin/api/smtp-configs/${id}`,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: () => {
+                        hideModal();
+                        loadConfigs();
+                    },
+                    error: () => alert('更新失败')
+                });
+            } else {
+                $.post('/admin/api/smtp-configs', JSON.stringify(data), () => {
+                    hideModal();
+                    loadConfigs();
+                }, 'json').fail(() => alert('创建失败'));
+            }
+        });
+
+        function toggleStatus(id, status) {
+            $.ajax({
+                url: `/admin/api/smtp-configs/${id}`,
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({status: status === 'active' ? 'inactive' : 'active'}),
+                success: loadConfigs
+            });
+        }
+
+        function deleteConfig(id) {
+            if (confirm('确定删除?')) {
+                $.ajax({url: `/admin/api/smtp-configs/${id}`, method: 'DELETE', success: loadConfigs});
+            }
+        }
+
+        function testSMTP(id) {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+            
+            $.post(`/admin/api/smtp-configs/${id}/test`, function(result) {
+                if (result.success) {
+                    alert('连接测试成功！');
+                } else {
+                    alert('连接测试失败: ' + (result.error || result.message));
+                }
+                btn.disabled = false;
+                btn.textContent = '测试';
+                loadConfigs();
+            }).fail(function() {
+                alert('测试请求失败');
+                btn.disabled = false;
+                btn.textContent = '测试';
+            });
+        }
+
+        function pauseSMTP(id) {
+            if (!confirm('确定要暂停此SMTP配置吗?')) return;
+            
+            $.post(`/admin/api/smtp-configs/${id}/pause`, function() {
+                alert('已暂停');
+                loadConfigs();
+            }).fail(function() {
+                alert('暂停失败');
+            });
+        }
+
+        function resumeSMTP(id) {
+            if (!confirm('确定要恢复此SMTP配置吗?')) return;
+            
+            $.post(`/admin/api/smtp-configs/${id}/resume`, function() {
+                alert('已恢复');
+                loadConfigs();
+            }).fail(function() {
+                alert('恢复失败');
+            });
+        }
+
+        function resetQuota(id) {
+            if (!confirm('确定要重置此SMTP的配额吗?')) return;
+            
+            $.post(`/admin/api/smtp-configs/${id}/reset-quota`, function() {
+                alert('配额重置成功');
+                loadConfigs();
+            }).fail(function() {
+                alert('配额重置失败');
+            });
+        }
+
+        loadConfigs();
+    </script>
+</body>
+</html>

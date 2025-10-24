@@ -1,0 +1,367 @@
+<style>
+.mailflow-card {
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.mailflow-card-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 2px solid #e9ecef;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mailflow-card-header h6 {
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+}
+
+.mailflow-card-body {
+    padding: 20px;
+}
+
+.filter-group {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-group label {
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+}
+
+.modern-table {
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.modern-table thead {
+    background: #f8f9fa;
+    color: #495057;
+}
+
+.modern-table thead th {
+    border: none;
+    padding: 12px 15px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.modern-table tbody tr {
+    border: none;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modern-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.modern-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.modern-table tbody td {
+    border: none;
+    padding: 12px 15px;
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.status-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-failed {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pagination {
+    display: flex;
+    list-style: none;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+}
+
+.pagination .page-item {
+    display: inline-block;
+}
+
+.pagination .page-link {
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    background: white;
+    cursor: pointer;
+    border-radius: 4px;
+    color: #495057;
+    transition: all 0.2s ease;
+}
+
+.pagination .page-link:hover {
+    background: #f8f9fa;
+}
+
+.pagination .page-item.active .page-link {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.pagination .page-item.disabled .page-link {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.loading-container {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+.error-container {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid #f5c6cb;
+    margin: 20px 0;
+}
+
+.no-data-container {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+.text-truncate {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+}
+</style>
+
+<div class="container-fluid">
+    <div class="card shadow mailflow-card">
+        <div class="card-header mailflow-card-header">
+            <h6 class="m-0">
+                <i class="fas fa-list-alt mr-2"></i>发送日志
+            </h6>
+            <button class="btn btn-sm btn-secondary" onclick="loadLogs()">
+                <i class="fas fa-sync-alt mr-1"></i>刷新
+            </button>
+        </div>
+        <div class="card-body mailflow-card-body">
+        <div class="filter-group">
+            <label><i class="fas fa-filter mr-1"></i>状态筛选：</label>
+            <select id="statusFilter" class="form-control form-control-sm" style="width: auto;" onchange="loadLogs(1)">
+                <option value="">全部</option>
+                <option value="success">成功</option>
+                <option value="failed">失败</option>
+            </select>
+            
+            <label class="ml-3"><i class="fas fa-list mr-1"></i>每页显示：</label>
+            <select id="pageSizeSelect" class="form-control form-control-sm" style="width: auto;" onchange="changePageSize()">
+                <option value="10" selected>10条</option>
+                <option value="20">20条</option>
+                <option value="30">30条</option>
+            </select>
+        </div>
+
+            <div id="logsContent">
+                <div class="loading-container">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>加载中...</p>
+                </div>
+            </div>
+
+            <div id="pagination"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+var currentLogsContainerId = '';
+var currentPage = 1;
+var totalPages = 1;
+var currentPageSize = 10;
+
+function changePageSize() {
+    currentPageSize = parseInt($('#pageSizeSelect').val());
+    loadLogs(1); // 重新加载第一页
+}
+
+function loadLogs(page) {
+    page = page || currentPage;
+    currentPage = page;
+
+    if (!currentLogsContainerId) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const containerId = urlParams.get('id');
+        if (!containerId) {
+            $('#logsContent').html('<div class="error-container"><i class="fas fa-exclamation-triangle mr-2"></i>无法获取产品ID</div>');
+            return;
+        }
+        currentLogsContainerId = containerId;
+    }
+
+    $('#logsContent').html('<div class="loading-container"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><p>加载中...</p></div>');
+    
+    const status = $('#statusFilter').val();
+    const timestamp = new Date().getTime();
+    let url = `/provision/custom/content?id=${currentLogsContainerId}&key=logs&action=getlogs&page=${page}&page_size=${currentPageSize}&_t=${timestamp}`;
+    
+    if (status) {
+        url += '&status=' + status;
+    }
+    
+    $.ajax({
+        url: url,
+        method: 'GET',
+        dataType: 'json',
+        timeout: 10000,
+        cache: false,
+        success: function(response) {
+            if (response.code && response.code !== 200) {
+                $('#logsContent').html('<div class="error-container"><i class="fas fa-exclamation-triangle mr-2"></i>加载失败: ' + (response.msg || response.error || '未知错误') + '</div>');
+                return;
+            }
+            renderLogs(response);
+        },
+        error: function(xhr, status, error) {
+            $('#logsContent').html('<div class="error-container"><i class="fas fa-exclamation-triangle mr-2"></i>加载失败: ' + error + '</div>');
+        }
+    });
+}
+
+function renderLogs(data) {
+    const logs = data.data || [];
+    const total = data.total || 0;
+    const pageSize = data.page_size || 20;
+    totalPages = Math.ceil(total / pageSize);
+
+    if (logs.length === 0) {
+        $('#logsContent').html('<div class="no-data-container"><i class="fas fa-inbox fa-3x mb-3 text-muted"></i><p>暂无日志记录</p></div>');
+        $('#pagination').html('');
+        return;
+    }
+
+    let html = '<table class="table modern-table mb-0">';
+    html += '<thead><tr>';
+    html += '<th><i class="fas fa-clock mr-1"></i>时间</th>';
+    html += '<th><i class="fas fa-envelope mr-1"></i>收件人</th>';
+    html += '<th><i class="fas fa-heading mr-1"></i>主题</th>';
+    html += '<th><i class="fas fa-info-circle mr-1"></i>状态</th>';
+    html += '<th><i class="fas fa-exclamation-circle mr-1"></i>错误信息</th>';
+    html += '</tr></thead>';
+    html += '<tbody>';
+
+    logs.forEach(log => {
+        const time = log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '-';
+        const status = log.status === 'success' ? 'success' : 'failed';
+        const statusText = log.status === 'success' ? '成功' : '失败';
+        const statusClass = 'status-' + status;
+        const recipient = log.to || '-';
+        const subject = log.subject || '-';
+        const errorMsg = log.error_msg || '-';
+
+        html += '<tr>';
+        html += '<td>' + time + '</td>';
+        html += '<td><span class="text-truncate" title="' + recipient + '">' + recipient + '</span></td>';
+        html += '<td><span class="text-truncate" title="' + subject + '">' + subject + '</span></td>';
+        html += '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>';
+        html += '<td><span class="text-truncate" title="' + errorMsg + '">' + errorMsg + '</span></td>';
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    $('#logsContent').html(html);
+
+    renderPagination();
+}
+
+function renderPagination() {
+    if (totalPages <= 1) {
+        $('#pagination').html('');
+        return;
+    }
+
+    let html = '<div class="pagination-container"><ul class="pagination">';
+    
+    // 上一页
+    html += '<li class="page-item ' + (currentPage <= 1 ? 'disabled' : '') + '">';
+    html += '<a class="page-link" href="javascript:void(0)" onclick="' + (currentPage > 1 ? 'loadLogs(' + (currentPage - 1) + ')' : 'return false') + '">上一页</a>';
+    html += '</li>';
+
+    // 页码
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+
+    if (startPage > 1) {
+        html += '<li class="page-item"><a class="page-link" href="javascript:void(0)" onclick="loadLogs(1)">1</a></li>';
+        if (startPage > 2) {
+            html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        html += '<li class="page-item ' + (i === currentPage ? 'active' : '') + '">';
+        html += '<a class="page-link" href="javascript:void(0)" onclick="loadLogs(' + i + ')">' + i + '</a>';
+        html += '</li>';
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+        }
+        html += '<li class="page-item"><a class="page-link" href="javascript:void(0)" onclick="loadLogs(' + totalPages + ')">' + totalPages + '</a></li>';
+    }
+
+    // 下一页
+    html += '<li class="page-item ' + (currentPage >= totalPages ? 'disabled' : '') + '">';
+    html += '<a class="page-link" href="javascript:void(0)" onclick="' + (currentPage < totalPages ? 'loadLogs(' + (currentPage + 1) + ')' : 'return false') + '">下一页</a>';
+    html += '</li>';
+
+    html += '</ul></div>';
+    $('#pagination').html(html);
+}
+
+$(document).ready(function() {
+    loadLogs(1);
+});
+</script>

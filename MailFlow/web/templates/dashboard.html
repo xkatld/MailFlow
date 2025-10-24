@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仪表盘 - MailFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-white min-h-screen">
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">MailFlow</h1>
+                    <div class="flex space-x-1">
+                        <a href="/admin" class="px-4 py-2 rounded bg-blue-50 text-blue-600 font-medium flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:dashboard"></span> 仪表盘
+                        </a>
+                        <a href="/admin/keys" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:key"></span> API密钥
+                        </a>
+                        <a href="/admin/smtp" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:mail"></span> SMTP
+                        </a>
+                        <a href="/admin/plans" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:package"></span> 套餐
+                        </a>
+                        <a href="/admin/admin-tokens" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:admin-panel-settings"></span> Token
+                        </a>
+                        <a href="/admin/logs" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:description"></span> 日志
+                        </a>
+                        <a href="/admin/stats" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:analytics"></span> 统计
+                        </a>
+                    </div>
+                </div>
+                <a href="/admin/logout" class="text-gray-600 hover:text-red-600 flex items-center gap-1">
+                    <span class="iconify" data-icon="material-symbols:logout"></span> 退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-bold text-gray-800">仪表盘</h2>
+            <div class="flex space-x-2 bg-white rounded-lg shadow p-1">
+                <button onclick="changePeriod('today')" id="tab-today" class="px-4 py-2 rounded bg-blue-600 text-white font-medium transition">今日</button>
+                <button onclick="changePeriod('week')" id="tab-week" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 transition">本周</button>
+                <button onclick="changePeriod('month')" id="tab-month" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 transition">本月</button>
+                <button onclick="changePeriod('all')" id="tab-all" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 transition">全部</button>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-md shadow p-6 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm" id="label-total">今日总量</p>
+                        <p id="statTotal" class="text-3xl font-bold mt-2 text-gray-800">-</p>
+                    </div>
+                    <span class="iconify text-4xl text-blue-500" data-icon="material-symbols:mail"></span>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-md shadow p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm" id="label-success">今日成功</p>
+                        <p id="statSuccess" class="text-3xl font-bold mt-2 text-gray-800">-</p>
+                    </div>
+                    <span class="iconify text-4xl text-green-500" data-icon="material-symbols:check-circle"></span>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-md shadow p-6 border-l-4 border-red-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm" id="label-failed">今日失败</p>
+                        <p id="statFailed" class="text-3xl font-bold mt-2 text-gray-800">-</p>
+                    </div>
+                    <span class="iconify text-4xl text-red-500" data-icon="material-symbols:error"></span>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-md shadow p-6 border-l-4 border-purple-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm" id="label-rate">今日成功率</p>
+                        <p id="successRate" class="text-3xl font-bold mt-2 text-gray-800">-</p>
+                    </div>
+                    <span class="iconify text-4xl text-purple-500" data-icon="material-symbols:pie-chart"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-md shadow p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">发送趋势</h3>
+                <div style="height: 250px;"><canvas id="trendChart"></canvas></div>
+            </div>
+            
+            <div class="bg-white rounded-md shadow p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">成功率统计</h3>
+                <div style="height: 250px;"><canvas id="rateChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-md shadow p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">最近日志</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-600 border-b">
+                            <th class="pb-3">收件人</th>
+                            <th class="pb-3">主题</th>
+                            <th class="pb-3">状态</th>
+                            <th class="pb-3">时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentLogs" class="text-gray-700">
+                        <tr><td colspan="4" class="text-center py-4 text-gray-400">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script>
+        let trendChart, rateChart;
+        let currentPeriod = 'today';
+
+        const periodLabels = {
+            today: { total: '今日总量', success: '今日成功', failed: '今日失败', rate: '今日成功率' },
+            week: { total: '本周总量', success: '本周成功', failed: '本周失败', rate: '本周成功率' },
+            month: { total: '本月总量', success: '本月成功', failed: '本月失败', rate: '本月成功率' },
+            all: { total: '历史总量', success: '历史成功', failed: '历史失败', rate: '历史成功率' }
+        };
+
+        function changePeriod(period) {
+            currentPeriod = period;
+            
+            $('.px-4.py-2.rounded').removeClass('bg-blue-600 text-white font-medium').addClass('hover:bg-gray-100 text-gray-700');
+            $('#tab-' + period).removeClass('hover:bg-gray-100 text-gray-700').addClass('bg-blue-600 text-white font-medium');
+            
+            const labels = periodLabels[period];
+            $('#label-total').text(labels.total);
+            $('#label-success').text(labels.success);
+            $('#label-failed').text(labels.failed);
+            $('#label-rate').text(labels.rate);
+            
+            loadStats();
+        }
+
+        function loadStats() {
+            $.get('/admin/api/stats/period?type=' + currentPeriod, function(data) {
+                console.log('统计数据:', data);
+                $('#statTotal').text(data.total || 0);
+                $('#statSuccess').text(data.success || 0);
+                $('#statFailed').text(data.failed || 0);
+                $('#successRate').text((data.success_rate || 0).toFixed(1) + '%');
+                
+                updateCharts(data);
+            }).fail(function(xhr, status, error) {
+                console.error('获取统计失败:', xhr.responseText);
+                alert('获取统计数据失败:\n' + (xhr.responseJSON?.error || xhr.responseText || error));
+            });
+        }
+
+        function updateCharts(data) {
+            const ctx1 = document.getElementById('trendChart');
+            const ctx2 = document.getElementById('rateChart');
+            
+            if (trendChart) trendChart.destroy();
+            if (rateChart) rateChart.destroy();
+            
+            trendChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: [periodLabels[currentPeriod].total],
+                    datasets: [{
+                        label: '发送成功',
+                        data: [data.success || 0],
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: '发送失败',
+                        data: [data.failed || 0],
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+            
+            rateChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['成功', '失败'],
+                    datasets: [{
+                        data: [data.success || 0, data.failed || 0],
+                        backgroundColor: ['rgb(34, 197, 94)', 'rgb(239, 68, 68)']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function loadRecentLogs() {
+            $.get('/admin/api/logs?page_size=10', function(result) {
+                const tbody = $('#recentLogs');
+                if (result.data && result.data.length > 0) {
+                    tbody.html(result.data.map(log => `
+                        <tr class="border-b hover:bg-blue-50">
+                            <td class="py-3">${log.to}</td>
+                            <td class="py-3">${log.subject || '-'}</td>
+                            <td class="py-3">
+                                <span class="px-2 py-1 rounded text-xs ${log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                                    ${log.status}
+                                </span>
+                            </td>
+                            <td class="py-3 text-sm text-gray-500">${new Date(log.created_at).toLocaleString('zh-CN')}</td>
+                        </tr>
+                    `).join(''));
+                } else {
+                    tbody.html('<tr><td colspan="4" class="text-center py-4 text-gray-400">暂无数据</td></tr>');
+                }
+            });
+        }
+
+        loadStats();
+        loadRecentLogs();
+        setInterval(loadStats, 30000);
+        setInterval(loadRecentLogs, 30000);
+    </script>
+</body>
+</html>

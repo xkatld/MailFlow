@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>套餐管理 - MailFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-white min-h-screen">
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">MailFlow</h1>
+                    <div class="flex space-x-1">
+                        <a href="/admin" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:dashboard"></span> 仪表盘
+                        </a>
+                        <a href="/admin/keys" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:key"></span> API密钥
+                        </a>
+                        <a href="/admin/smtp" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:mail"></span> SMTP
+                        </a>
+                        <a href="/admin/plans" class="px-4 py-2 rounded bg-blue-50 text-blue-600 font-medium flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:package"></span> 套餐
+                        </a>
+                        <a href="/admin/admin-tokens" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:admin-panel-settings"></span> Token
+                        </a>
+                        <a href="/admin/logs" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:description"></span> 日志
+                        </a>
+                        <a href="/admin/stats" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+                            <span class="iconify" data-icon="material-symbols:analytics"></span> 统计
+                        </a>
+                    </div>
+                </div>
+                <a href="/admin/logout" class="text-gray-600 hover:text-red-600 flex items-center gap-1">
+                    <span class="iconify" data-icon="material-symbols:logout"></span> 退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">套餐管理</h2>
+            <button onclick="showCreateModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow flex items-center gap-2">
+                <span class="iconify" data-icon="material-symbols:add"></span> 创建套餐
+            </button>
+        </div>
+
+        <div class="bg-white rounded-md shadow overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr class="text-left text-gray-600">
+                        <th class="px-6 py-4">排序</th>
+                        <th class="px-6 py-4">代码</th>
+                        <th class="px-6 py-4">名称</th>
+                        <th class="px-6 py-4">限额</th>
+                        <th class="px-6 py-4">状态</th>
+                        <th class="px-6 py-4">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="plansTable" class="divide-y divide-gray-200">
+                    <tr><td colspan="6" class="text-center py-8 text-gray-400">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-md shadow-2xl w-full max-w-2xl p-8 m-4">
+            <h3 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-6">创建套餐</h3>
+            <form id="planForm" class="space-y-4">
+                <input type="hidden" id="planId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">代码</label>
+                        <input type="text" id="code" required class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">名称</label>
+                        <input type="text" id="name" required class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">描述</label>
+                        <textarea id="description" rows="2" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">每分钟限制 (0=无限)</label>
+                        <input type="number" id="minuteLimit" value="100" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">每日限制 (0=无限)</label>
+                        <input type="number" id="dailyLimit" value="5000" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">每周限制 (0=无限)</label>
+                        <input type="number" id="weeklyLimit" value="30000" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">每月限制 (0=无限)</label>
+                        <input type="number" id="monthlyLimit" value="100000" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">排序</label>
+                        <input type="number" id="sortOrder" value="1" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">状态</label>
+                        <select id="isActive" class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="true">启用</option>
+                            <option value="false">禁用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex space-x-3 pt-4">
+                    <button type="button" onclick="hideModal()" class="flex-1 px-4 py-2 border rounded hover:bg-gray-50">取消</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script>
+        let allPlans = [];
+
+        function showCreateModal() {
+            $('#modalTitle').text('创建套餐');
+            $('#planForm')[0].reset();
+            $('#planId').val('');
+            $('#modal').removeClass('hidden');
+        }
+
+        function showEditModal(plan) {
+            $('#modalTitle').text('编辑套餐');
+            $('#planId').val(plan.id);
+            $('#code').val(plan.code);
+            $('#name').val(plan.name);
+            $('#description').val(plan.description);
+            $('#minuteLimit').val(plan.minute_limit);
+            $('#dailyLimit').val(plan.daily_limit);
+            $('#weeklyLimit').val(plan.weekly_limit);
+            $('#monthlyLimit').val(plan.monthly_limit);
+            $('#sortOrder').val(plan.sort_order);
+            $('#isActive').val(plan.is_active.toString());
+            $('#modal').removeClass('hidden');
+        }
+
+        function hideModal() {
+            $('#modal').addClass('hidden');
+        }
+
+        function loadPlans() {
+            $.get('/admin/api/plans', function(plans) {
+                allPlans = plans || [];
+                renderTable();
+            }).fail(function(xhr) {
+                $('#plansTable').html(`<tr><td colspan="6" class="text-center py-8 text-red-500">加载失败: ${xhr.responseJSON?.error || '未知错误'}</td></tr>`);
+            });
+        }
+
+        function renderTable() {
+            const tbody = $('#plansTable');
+            if (allPlans.length > 0) {
+                tbody.html(allPlans.map(plan => `
+                    <tr class="hover:bg-blue-50">
+                        <td class="px-6 py-4">${plan.sort_order}</td>
+                        <td class="px-6 py-4"><code class="bg-gray-100 px-2 py-1 rounded text-sm">${plan.code}</code></td>
+                        <td class="px-6 py-4">
+                            <div class="font-medium">${plan.name}</div>
+                            <div class="text-xs text-gray-500">${plan.description || ''}</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <div>分钟: ${plan.minute_limit || '∞'}</div>
+                            <div>日: ${plan.daily_limit || '∞'} / 周: ${plan.weekly_limit || '∞'} / 月: ${plan.monthly_limit || '∞'}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded text-xs ${plan.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}">
+                                ${plan.is_active ? '启用' : '禁用'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <button onclick='showEditModal(${JSON.stringify(plan).replace(/'/g, "&apos;")})' class="text-blue-600 hover:text-blue-700 mr-3">编辑</button>
+                            <button onclick="toggleStatus(${plan.id})" class="text-yellow-600 hover:text-yellow-700 mr-3">
+                                ${plan.is_active ? '禁用' : '启用'}
+                            </button>
+                            <button onclick="deletePlan(${plan.id})" class="text-red-600 hover:text-red-700">删除</button>
+                        </td>
+                    </tr>
+                `).join(''));
+            } else {
+                tbody.html('<tr><td colspan="6" class="text-center py-8 text-gray-400">暂无数据</td></tr>');
+            }
+        }
+
+        $('#planForm').on('submit', function(e) {
+            e.preventDefault();
+            const id = $('#planId').val();
+            const data = {
+                code: $('#code').val(),
+                name: $('#name').val(),
+                description: $('#description').val(),
+                minute_limit: parseInt($('#minuteLimit').val()),
+                daily_limit: parseInt($('#dailyLimit').val()),
+                weekly_limit: parseInt($('#weeklyLimit').val()),
+                monthly_limit: parseInt($('#monthlyLimit').val()),
+                sort_order: parseInt($('#sortOrder').val()),
+                is_active: $('#isActive').val() === 'true'
+            };
+
+            if (id) {
+                $.ajax({
+                    url: `/admin/api/plans/${id}`,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: () => {
+                        hideModal();
+                        loadPlans();
+                    },
+                    error: (xhr) => alert('更新失败: ' + (xhr.responseJSON?.error || '未知错误'))
+                });
+            } else {
+                $.post('/admin/api/plans', JSON.stringify(data), () => {
+                    hideModal();
+                    loadPlans();
+                }, 'json').fail((xhr) => alert('创建失败: ' + (xhr.responseJSON?.error || '未知错误')));
+            }
+        });
+
+        function toggleStatus(id) {
+            $.ajax({
+                url: `/admin/api/plans/${id}/toggle`,
+                method: 'PUT',
+                success: loadPlans,
+                error: (xhr) => alert('操作失败: ' + (xhr.responseJSON?.error || '未知错误'))
+            });
+        }
+
+        function deletePlan(id) {
+            if (confirm('确定删除该套餐吗? 如果有API Key正在使用此套餐将无法删除。')) {
+                $.ajax({
+                    url: `/admin/api/plans/${id}`,
+                    method: 'DELETE',
+                    success: loadPlans,
+                    error: (xhr) => alert('删除失败: ' + (xhr.responseJSON?.error || '未知错误'))
+                });
+            }
+        }
+
+        loadPlans();
+    </script>
+</body>
+</html>
+
