@@ -22,14 +22,16 @@
 
 ```bash
 # 1. 一键部署（自动安装 PostgreSQL + Redis）
-sudo ./deploy.sh
+wget https://github.com/xkatld/MailFlow/releases/download/v1.0.0/MailFlow.zip
+unzip MailFlow.zip
+cd MailFlow
+bash deploy.sh
 
 # 2. 访问管理后台
-http://服务器IP:8080/admin
-# 账号密码在 /opt/mailflow/config.yaml
+http://服务器IP:端口/admin
 
 # 3. 发送邮件测试
-curl -X POST http://localhost:8080/api/v1/send \
+curl -X POST http://服务器IP:端口/api/v1/send \
   -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{"to":["test@example.com"],"subject":"测试","html":"<h1>Hello</h1>"}'
