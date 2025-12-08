@@ -499,11 +499,12 @@ func getLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "50"))
 	status := c.Query("status")
+	search := c.Query("search")
 	
 	if page < 1 {
 		page = 1
 	}
-	if pageSize < 1 || pageSize > 100 {
+	if pageSize < 1 || pageSize > 500 {
 		pageSize = 50
 	}
 
@@ -511,6 +512,10 @@ func getLogs(c *gin.Context) {
 	
 	if status != "" {
 		query = query.Where("status = ?", status)
+	}
+	
+	if search != "" {
+		query = query.Where("\"to\" ILIKE ? OR subject ILIKE ?", "%"+search+"%", "%"+search+"%")
 	}
 
 	var total int64

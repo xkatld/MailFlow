@@ -11,6 +11,7 @@ func RegisterWebUI(r *gin.Engine, cfg *config.Config) {
 	r.Static("/static", "./web/static")
 	r.LoadHTMLGlob("web/templates/*")
 
+	r.GET("/", indexPage)
 	r.GET("/admin/login", loginPage)
 	r.POST("/admin/login", HandleLogin(cfg))
 	r.GET("/admin/logout", HandleLogout())
@@ -27,6 +28,10 @@ func RegisterWebUI(r *gin.Engine, cfg *config.Config) {
 		admin.GET("/logs", logsPage)
 		admin.GET("/stats", statsPage)
 	}
+}
+
+func indexPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.html", nil)
 }
 
 func loginPage(c *gin.Context) {
@@ -77,7 +82,7 @@ func plansPage(c *gin.Context) {
 
 func adminTokensPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "admin-tokens.html", gin.H{
-		"title": "管理员Token",
+		"title": "Token",
 		"page":  "admin-tokens",
 	})
 }

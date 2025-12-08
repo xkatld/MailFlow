@@ -177,37 +177,9 @@
         }
 
         function updateCharts(data) {
-            const ctx1 = document.getElementById('trendChart');
             const ctx2 = document.getElementById('rateChart');
             
-            if (trendChart) trendChart.destroy();
             if (rateChart) rateChart.destroy();
-            
-            trendChart = new Chart(ctx1, {
-                type: 'line',
-                data: {
-                    labels: [periodLabels[currentPeriod].total],
-                    datasets: [{
-                        label: '发送成功',
-                        data: [data.success || 0],
-                        borderColor: 'rgb(34, 197, 94)',
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        tension: 0.4
-                    }, {
-                        label: '发送失败',
-                        data: [data.failed || 0],
-                        borderColor: 'rgb(239, 68, 68)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
             
             rateChart = new Chart(ctx2, {
                 type: 'doughnut',
@@ -223,6 +195,75 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { position: 'bottom' } }
                 }
+            });
+            
+            loadTrendChart();
+        }
+        
+        function loadTrendChart() {
+            const now = new Date();
+            let startDate, endDate;
+            
+            endDate = now.toISOString().split('T')[0];
+            
+            switch(currentPeriod) {
+                case 'today':
+                    startDate = endDate;
+                    break;
+                case 'week':
+                    const weekAgo = new Date(now);
+                    weekAgo.setDate(weekAgo.getDate() - 6);
+                    startDate = weekAgo.toISOString().split('T')[0];
+                    break;
+                case 'month':
+                    const monthAgo = new Date(now);
+                    monthAgo.setDate(monthAgo.getDate() - 29);
+                    startDate = monthAgo.toISOString().split('T')[0];
+                    break;
+                case 'all':
+                    const threeMonthsAgo = new Date(now);
+                    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+                    startDate = threeMonthsAgo.toISOString().split('T')[0];
+                    break;
+                default:
+                    startDate = endDate;
+            }
+            
+            $.get(`/admin/api/trend?start=${startDate}&end=${endDate}`, function(trendData) {
+                const ctx1 = document.getElementById('trendChart');
+                if (trendChart) trendChart.destroy();
+                
+                const labels = trendData.labels || [];
+                const successData = trendData.success || [];
+                const failedData = trendData.failed || [];
+                
+                trendChart = new Chart(ctx1, {
+                    type: 'line',
+                    data: {
+                        labels: labels.map(d => d.substring(5)),
+                        datasets: [{
+                            label: '发送成功',
+                            data: successData,
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: '发送失败',
+                            data: failedData,
+                            borderColor: 'rgb(239, 68, 68)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
             });
         }
 
@@ -253,5 +294,16 @@
         setInterval(loadStats, 30000);
         setInterval(loadRecentLogs, 30000);
     </script>
+
+    <footer class="bg-white border-t border-gray-100 mt-12" style="box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.1);">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex justify-end items-center gap-2 text-sm">
+                <span class="iconify text-blue-600" data-icon="mdi:github"></span>
+                <a href="https://github.com/xkatld" target="_blank" class="text-blue-600 hover:text-blue-700">xkatld</a>
+                <span class="text-gray-400">|</span>
+                <span class="text-gray-600">v1.0.1</span>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

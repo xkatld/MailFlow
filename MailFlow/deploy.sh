@@ -1,17 +1,12 @@
 #!/bin/bash
 
-# MailFlow 交互式部署脚本
-# 支持 Linux amd64/arm64
-
 set -e
 
-# 颜色输出
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# 日志函数
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
@@ -24,7 +19,6 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 检查是否为root用户
 check_root() {
     if [ "$EUID" -ne 0 ]; then 
         log_error "请使用root用户或sudo运行此脚本"
@@ -32,7 +26,6 @@ check_root() {
     fi
 }
 
-# 检测系统类型
 detect_os() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -45,7 +38,6 @@ detect_os() {
     log_info "检测到系统: $OS $VERSION"
 }
 
-# 检测架构
 detect_arch() {
     ARCH=$(uname -m)
     case $ARCH in
@@ -63,7 +55,6 @@ detect_arch() {
     log_info "系统架构: $ARCH"
 }
 
-# 安装PostgreSQL
 install_postgresql() {
     log_info "正在安装 PostgreSQL..."
     
@@ -89,7 +80,6 @@ install_postgresql() {
     log_info "PostgreSQL 安装完成"
 }
 
-# 安装Redis
 install_redis() {
     log_info "正在安装 Redis..."
     
@@ -113,7 +103,6 @@ install_redis() {
     log_info "Redis 安装完成"
 }
 
-# 创建数据库和用户
 setup_database() {
     log_info "配置数据库..."
     
@@ -131,7 +120,6 @@ setup_database() {
         log_info "生成的随机密码: $DB_PASSWORD"
     fi
     
-    # 创建数据库和用户
     sudo -u postgres psql << EOF
 CREATE DATABASE $DB_NAME;
 CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
@@ -147,26 +135,21 @@ EOF
     log_info "数据库配置完成"
 }
 
-# 配置应用
 configure_app() {
     log_info "配置应用..."
     
-    # 安装目录
     read -p "请输入安装目录 [/opt/mailflow]: " INSTALL_DIR
     INSTALL_DIR=${INSTALL_DIR:-/opt/mailflow}
     
     mkdir -p "$INSTALL_DIR"
     
-    # 服务端口
     read -p "请输入服务端口 [8080]: " SERVER_PORT
     SERVER_PORT=${SERVER_PORT:-8080}
     
-    # Worker数量（默认为CPU核心数）
     CPU_COUNT=$(nproc)
     read -p "请输入Worker数量 [$CPU_COUNT]: " WORKER_COUNT
     WORKER_COUNT=${WORKER_COUNT:-$CPU_COUNT}
     
-    # 管理员账号
     read -p "请输入管理员用户名 [admin]: " ADMIN_USER
     ADMIN_USER=${ADMIN_USER:-admin}
     
@@ -178,7 +161,6 @@ configure_app() {
         log_info "生成的管理员密码: $ADMIN_PASSWORD"
     fi
     
-    # 复制可执行文件
     if [ -f "./bin/mailflow-linux-$ARCH" ]; then
         cp "./bin/mailflow-linux-$ARCH" "$INSTALL_DIR/mailflow"
         chmod +x "$INSTALL_DIR/mailflow"
@@ -192,13 +174,11 @@ configure_app() {
         exit 1
     fi
     
-    # 复制web目录
     if [ -d "./web" ]; then
         cp -r ./web "$INSTALL_DIR/"
         log_info "已复制web目录"
     fi
     
-    # 生成配置文件
     cat > "$INSTALL_DIR/config.yaml" << EOF
 server:
   port: $SERVER_PORT
@@ -227,7 +207,6 @@ EOF
     log_info "配置文件已生成: $INSTALL_DIR/config.yaml"
 }
 
-# 创建systemd服务
 create_service() {
     log_info "创建systemd服务..."
     
@@ -257,8 +236,6 @@ EOF
     log_info "Systemd服务已创建"
 }
 
-
-# 启动服务
 start_service() {
     log_info "启动服务..."
     
@@ -272,7 +249,6 @@ start_service() {
     fi
 }
 
-# 显示信息
 show_info() {
     local SERVER_IP=$(hostname -I | awk '{print $1}')
     
@@ -311,7 +287,6 @@ show_info() {
     echo ""
 }
 
-# 编译应用
 build_app() {
     log_info "开始编译应用..."
     
@@ -346,7 +321,6 @@ build_app() {
     fi
 }
 
-# 主菜单
 main_menu() {
     echo ""
     echo "======================================"
@@ -395,7 +369,6 @@ main_menu() {
     esac
 }
 
-# 完整安装
 full_install() {
     check_root
     detect_os
@@ -412,7 +385,6 @@ full_install() {
     show_info
 }
 
-# 仅安装依赖
 install_dependencies() {
     check_root
     detect_os
@@ -425,7 +397,6 @@ install_dependencies() {
     log_info "依赖安装完成"
 }
 
-# 仅部署应用
 deploy_only() {
     check_root
     detect_os
@@ -433,7 +404,6 @@ deploy_only() {
     
     log_info "开始部署应用..."
     
-    # 检查依赖
     if ! command -v psql &> /dev/null; then
         log_error "PostgreSQL未安装，请先安装依赖"
         exit 1
@@ -451,7 +421,6 @@ deploy_only() {
     show_info
 }
 
-# 更新应用
 update_app() {
     check_root
     detect_arch
@@ -465,23 +434,19 @@ update_app() {
         exit 1
     fi
     
-    # 停止服务
     log_info "停止服务..."
     systemctl stop mailflow
     
-    # 备份配置文件
     if [ -f "$INSTALL_DIR/config.yaml" ]; then
         cp "$INSTALL_DIR/config.yaml" "$INSTALL_DIR/config.yaml.backup"
         log_info "已备份配置文件"
     fi
     
-    # 备份旧版本
     if [ -f "$INSTALL_DIR/mailflow" ]; then
         cp "$INSTALL_DIR/mailflow" "$INSTALL_DIR/mailflow.backup"
         log_info "已备份旧版本"
     fi
     
-    # 复制新版本
     if [ -f "./bin/mailflow-linux-$ARCH" ]; then
         cp "./bin/mailflow-linux-$ARCH" "$INSTALL_DIR/mailflow"
         chmod +x "$INSTALL_DIR/mailflow"
@@ -492,7 +457,6 @@ update_app() {
         log_info "已更新可执行文件"
     else
         log_error "找不到可执行文件，请先运行编译"
-        # 恢复备份
         if [ -f "$INSTALL_DIR/mailflow.backup" ]; then
             mv "$INSTALL_DIR/mailflow.backup" "$INSTALL_DIR/mailflow"
         fi
@@ -500,7 +464,6 @@ update_app() {
         exit 1
     fi
     
-    # 更新web目录
     if [ -d "./web" ]; then
         if [ -d "$INSTALL_DIR/web" ]; then
             rm -rf "$INSTALL_DIR/web.backup" 2>/dev/null
@@ -510,13 +473,11 @@ update_app() {
         log_info "已更新web目录"
     fi
     
-    # 恢复配置文件（如果新版本覆盖了）
     if [ -f "$INSTALL_DIR/config.yaml.backup" ]; then
         mv "$INSTALL_DIR/config.yaml.backup" "$INSTALL_DIR/config.yaml"
         log_info "已恢复配置文件"
     fi
     
-    # 启动服务
     log_info "启动服务..."
     systemctl start mailflow
     sleep 2
@@ -543,7 +504,6 @@ update_app() {
     fi
 }
 
-# 卸载
 uninstall() {
     check_root
     
@@ -557,7 +517,6 @@ uninstall() {
     
     INSTALL_DIR="/opt/mailflow"
     
-    # 停止并删除服务
     if systemctl is-active --quiet mailflow; then
         systemctl stop mailflow
     fi
@@ -569,7 +528,6 @@ uninstall() {
         log_info "已删除systemd服务"
     fi
     
-    # 删除安装目录
     if [ -d "$INSTALL_DIR" ]; then
         rm -rf "$INSTALL_DIR"
         log_info "已删除安装目录: $INSTALL_DIR"
@@ -579,6 +537,5 @@ uninstall() {
     log_warn "数据库和Redis数据未删除，如需删除请手动操作"
 }
 
-# 运行主菜单
 main_menu
 

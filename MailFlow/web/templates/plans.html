@@ -50,11 +50,22 @@
                 <span class="iconify" data-icon="material-symbols:add"></span> 创建套餐
             </button>
         </div>
+        
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex space-x-4">
+                <input type="text" id="searchInput" placeholder="搜索代码或名称..." class="px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none w-64">
+                <button onclick="applyFilter()" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded">搜索</button>
+            </div>
+            <div class="flex space-x-2">
+                <button onclick="batchDelete()" id="batchDeleteBtn" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">批量删除</button>
+            </div>
+        </div>
 
         <div class="bg-white rounded-md shadow overflow-hidden">
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-gray-600">
+                        <th class="px-6 py-4"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
                         <th class="px-6 py-4">排序</th>
                         <th class="px-6 py-4">代码</th>
                         <th class="px-6 py-4">名称</th>
@@ -64,10 +75,12 @@
                     </tr>
                 </thead>
                 <tbody id="plansTable" class="divide-y divide-gray-200">
-                    <tr><td colspan="6" class="text-center py-8 text-gray-400">加载中...</td></tr>
+                    <tr><td colspan="7" class="text-center py-8 text-gray-400">加载中...</td></tr>
                 </tbody>
             </table>
         </div>
+        
+        <div id="pagination" class="flex justify-center space-x-2 mt-6"></div>
     </div>
 
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -128,6 +141,10 @@
     <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
     <script>
         let allPlans = [];
+        let filteredPlans = [];
+        let currentPage = 1;
+        let pageSize = 20;
+        let selectedIds = new Set();
 
         function showCreateModal() {
             $('#modalTitle').text('创建套餐');
@@ -158,17 +175,37 @@
         function loadPlans() {
             $.get('/admin/api/plans', function(plans) {
                 allPlans = plans || [];
-                renderTable();
+                applyFilter();
             }).fail(function(xhr) {
-                $('#plansTable').html(`<tr><td colspan="6" class="text-center py-8 text-red-500">加载失败: ${xhr.responseJSON?.error || '未知错误'}</td></tr>`);
+                $('#plansTable').html(`<tr><td colspan="7" class="text-center py-8 text-red-500">加载失败: ${xhr.responseJSON?.error || '未知错误'}</td></tr>`);
             });
+        }
+        
+        function applyFilter() {
+            const search = $('#searchInput').val().toLowerCase();
+            
+            filteredPlans = allPlans.filter(plan => {
+                return !search || plan.code.toLowerCase().includes(search) || plan.name.toLowerCase().includes(search);
+            });
+            
+            currentPage = 1;
+            selectedIds.clear();
+            updateBatchButton();
+            renderTable();
         }
 
         function renderTable() {
             const tbody = $('#plansTable');
-            if (allPlans.length > 0) {
-                tbody.html(allPlans.map(plan => `
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = filteredPlans.slice(start, end);
+            
+            if (pageData.length > 0) {
+                tbody.html(pageData.map(plan => {
+                    const checked = selectedIds.has(plan.id) ? 'checked' : '';
+                    return `
                     <tr class="hover:bg-blue-50">
+                        <td class="px-6 py-4"><input type="checkbox" ${checked} onchange="toggleSelect(${plan.id})"></td>
                         <td class="px-6 py-4">${plan.sort_order}</td>
                         <td class="px-6 py-4"><code class="bg-gray-100 px-2 py-1 rounded text-sm">${plan.code}</code></td>
                         <td class="px-6 py-4">
@@ -192,11 +229,120 @@
                             <button onclick="deletePlan(${plan.id})" class="text-red-600 hover:text-red-700">删除</button>
                         </td>
                     </tr>
-                `).join(''));
+                `}).join(''));
             } else {
-                tbody.html('<tr><td colspan="6" class="text-center py-8 text-gray-400">暂无数据</td></tr>');
+                tbody.html('<tr><td colspan="7" class="text-center py-8 text-gray-400">暂无数据</td></tr>');
+            }
+            
+            renderPagination();
+        }
+        
+        function renderPagination() {
+            const totalPages = Math.ceil(filteredPlans.length / pageSize);
+            if (totalPages <= 1) {
+                $('#pagination').html('');
+                return;
+            }
+            
+            let html = '';
+            if (currentPage > 1) {
+                html += `<button onclick="goToPage(${currentPage - 1})" class="px-4 py-2 bg-white border rounded hover:bg-gray-50">上一页</button>`;
+            }
+            
+            const start = Math.max(1, currentPage - 2);
+            const end = Math.min(totalPages, currentPage + 2);
+            
+            for (let i = start; i <= end; i++) {
+                html += `<button onclick="goToPage(${i})" class="px-4 py-2 ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white border hover:bg-gray-50'} rounded">${i}</button>`;
+            }
+            
+            if (currentPage < totalPages) {
+                html += `<button onclick="goToPage(${currentPage + 1})" class="px-4 py-2 bg-white border rounded hover:bg-gray-50">下一页</button>`;
+            }
+            
+            $('#pagination').html(html);
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            renderTable();
+        }
+        
+        function toggleSelect(id) {
+            if (selectedIds.has(id)) {
+                selectedIds.delete(id);
+            } else {
+                selectedIds.add(id);
+            }
+            updateBatchButton();
+        }
+        
+        function toggleSelectAll() {
+            const checked = $('#selectAll').prop('checked');
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = filteredPlans.slice(start, end);
+            
+            pageData.forEach(plan => {
+                if (checked) {
+                    selectedIds.add(plan.id);
+                } else {
+                    selectedIds.delete(plan.id);
+                }
+            });
+            
+            updateBatchButton();
+            renderTable();
+        }
+        
+        function updateBatchButton() {
+            if (selectedIds.size > 0) {
+                $('#batchDeleteBtn').removeClass('hidden').text(`批量删除 (${selectedIds.size})`);
+            } else {
+                $('#batchDeleteBtn').addClass('hidden');
             }
         }
+        
+        function batchDelete() {
+            if (selectedIds.size === 0) return;
+            if (!confirm(`确定删除选中的 ${selectedIds.size} 个套餐吗？`)) return;
+            
+            const ids = Array.from(selectedIds);
+            let completed = 0;
+            let errors = [];
+            
+            ids.forEach(id => {
+                $.ajax({
+                    url: `/admin/api/plans/${id}`,
+                    method: 'DELETE',
+                    success: function() {
+                        completed++;
+                        if (completed === ids.length) {
+                            selectedIds.clear();
+                            updateBatchButton();
+                            loadPlans();
+                            if (errors.length > 0) {
+                                alert('部分删除失败: ' + errors.join(', '));
+                            }
+                        }
+                    },
+                    error: function(xhr) {
+                        errors.push(xhr.responseJSON?.error || '未知错误');
+                        completed++;
+                        if (completed === ids.length) {
+                            loadPlans();
+                            if (errors.length > 0) {
+                                alert('部分删除失败: ' + errors.join(', '));
+                            }
+                        }
+                    }
+                });
+            });
+        }
+        
+        $('#searchInput').on('keyup', function(e) {
+            if (e.key === 'Enter') applyFilter();
+        });
 
         $('#planForm').on('submit', function(e) {
             e.preventDefault();
@@ -255,6 +401,17 @@
 
         loadPlans();
     </script>
+
+    <footer class="bg-white border-t border-gray-100 mt-12" style="box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.1);">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex justify-end items-center gap-2 text-sm">
+                <span class="iconify text-blue-600" data-icon="mdi:github"></span>
+                <a href="https://github.com/xkatld" target="_blank" class="text-blue-600 hover:text-blue-700">xkatld</a>
+                <span class="text-gray-400">|</span>
+                <span class="text-gray-600">v1.0.1</span>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>
 

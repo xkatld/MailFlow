@@ -48,13 +48,14 @@
         
         <div class="flex justify-between items-center mb-6">
             <div class="flex space-x-4">
+                <input type="text" id="searchInput" placeholder="搜索收件人或主题..." class="px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none w-64">
                 <select id="statusFilter" onchange="loadLogs(1)" class="px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
                     <option value="">全部状态</option>
                     <option value="success">成功</option>
                     <option value="failed">失败</option>
                 </select>
                 <button onclick="loadLogs(1)" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded flex items-center gap-2">
-                    <span class="iconify" data-icon="material-symbols:refresh"></span> 刷新
+                    <span class="iconify" data-icon="material-symbols:refresh"></span> 搜索
                 </button>
             </div>
             <div class="flex items-center gap-2">
@@ -96,9 +97,11 @@
         function loadLogs(page) {
             currentPage = page;
             const status = $('#statusFilter').val();
+            const search = $('#searchInput').val();
             const pageSize = $('#pageSize').val() || 25;
             let url = `/admin/api/logs?page=${page}&page_size=${pageSize}`;
             if (status) url += `&status=${status}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
 
             $.get(url, function(result) {
                 const tbody = $('#logsTable');
@@ -154,8 +157,23 @@
             $('#pagination').html(html);
         }
 
+        $('#searchInput').on('keyup', function(e) {
+            if (e.key === 'Enter') loadLogs(1);
+        });
+
         loadLogs(1);
         setInterval(() => loadLogs(currentPage), 30000);
     </script>
+
+    <footer class="bg-white border-t border-gray-100 mt-12" style="box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.1);">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex justify-end items-center gap-2 text-sm">
+                <span class="iconify text-blue-600" data-icon="mdi:github"></span>
+                <a href="https://github.com/xkatld" target="_blank" class="text-blue-600 hover:text-blue-700">xkatld</a>
+                <span class="text-gray-400">|</span>
+                <span class="text-gray-600">v1.0.1</span>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

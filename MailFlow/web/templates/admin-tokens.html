@@ -26,7 +26,7 @@
                             <span class="iconify" data-icon="material-symbols:package"></span> 套餐
                         </a>
                         <a href="/admin/admin-tokens" class="px-4 py-2 rounded bg-blue-50 text-blue-600 font-medium flex items-center gap-1">
-                            <span class="iconify" data-icon="material-symbols:admin-panel-settings"></span> 管理员Token
+                            <span class="iconify" data-icon="material-symbols:admin-panel-settings"></span> Token
                         </a>
                         <a href="/admin/logs" class="px-4 py-2 rounded hover:bg-gray-100 text-gray-700 flex items-center gap-1">
                             <span class="iconify" data-icon="material-symbols:description"></span> 日志
@@ -46,12 +46,27 @@
     <div class="max-w-7xl mx-auto px-4 py-8">
         <div class="flex justify-between items-center mb-6">
             <div>
-                <h2 class="text-3xl font-bold text-gray-800">管理员Token管理</h2>
-                <p class="text-gray-600 mt-2">用于外部系统（如ZJMF）调用管理员API的认证凭证</p>
+                <h2 class="text-3xl font-bold text-gray-800">Token管理</h2>
+                <p class="text-gray-600 mt-2">用于外部系统调用管理员API的认证凭证</p>
             </div>
             <button onclick="showCreateModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow flex items-center gap-2">
                 <span class="iconify" data-icon="material-symbols:add"></span> 创建Token
             </button>
+        </div>
+        
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex space-x-4">
+                <input type="text" id="searchInput" placeholder="搜索名称..." class="px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none w-64">
+                <select id="statusFilter" class="px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="">全部状态</option>
+                    <option value="active">启用</option>
+                    <option value="inactive">禁用</option>
+                </select>
+                <button onclick="applyFilter()" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded">筛选</button>
+            </div>
+            <div class="flex space-x-2">
+                <button onclick="batchDelete()" id="batchDeleteBtn" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">批量删除</button>
+            </div>
         </div>
 
         <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
@@ -71,6 +86,7 @@
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-gray-600">
+                        <th class="px-6 py-4"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
                         <th class="px-6 py-4">ID</th>
                         <th class="px-6 py-4">名称</th>
                         <th class="px-6 py-4">描述</th>
@@ -81,10 +97,12 @@
                     </tr>
                 </thead>
                 <tbody id="tokensTable" class="divide-y divide-gray-200">
-                    <tr><td colspan="7" class="text-center py-8 text-gray-400">加载中...</td></tr>
+                    <tr><td colspan="8" class="text-center py-8 text-gray-400">加载中...</td></tr>
                 </tbody>
             </table>
         </div>
+        
+        <div id="pagination" class="flex justify-center space-x-2 mt-6"></div>
     </div>
 
     <!-- 创建Token模态框 -->
@@ -140,6 +158,12 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
     <script>
+        let allTokens = [];
+        let filteredTokens = [];
+        let currentPage = 1;
+        let pageSize = 20;
+        let selectedIds = new Set();
+
         function showCreateModal() {
             $('#createForm')[0].reset();
             $('#createModal').removeClass('hidden');
@@ -172,38 +196,162 @@
 
         function loadTokens() {
             $.get('/admin/api/admin-tokens', function(tokens) {
-                const tbody = $('#tokensTable');
-                if (tokens && tokens.length > 0) {
-                    tbody.html(tokens.map(token => {
-                        const statusClass = token.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700';
-                        const statusText = token.is_active ? '启用' : '禁用';
-                        const lastUsed = token.last_used_at ? new Date(token.last_used_at).toLocaleString('zh-CN') : '从未使用';
-                        const createdAt = new Date(token.created_at).toLocaleString('zh-CN');
-                        
-                        return `
-                            <tr class="hover:bg-blue-50">
-                                <td class="px-6 py-4">${token.id}</td>
-                                <td class="px-6 py-4 font-medium">${token.name}</td>
-                                <td class="px-6 py-4 text-sm text-gray-600">${token.description || '-'}</td>
-                                <td class="px-6 py-4">
-                                    <span class="px-3 py-1 rounded text-xs ${statusClass}">${statusText}</span>
-                                </td>
-                                <td class="px-6 py-4 text-sm">${lastUsed}</td>
-                                <td class="px-6 py-4 text-sm">${createdAt}</td>
-                                <td class="px-6 py-4 text-sm">
-                                    <button onclick="toggleStatus(${token.id})" class="text-yellow-600 hover:text-yellow-700 mr-3">
-                                        ${token.is_active ? '禁用' : '启用'}
-                                    </button>
-                                    <button onclick="deleteToken(${token.id})" class="text-red-600 hover:text-red-700">删除</button>
-                                </td>
-                            </tr>
-                        `;
-                    }).join(''));
-                } else {
-                    tbody.html('<tr><td colspan="7" class="text-center py-8 text-gray-400">暂无Token</td></tr>');
-                }
+                allTokens = tokens || [];
+                applyFilter();
             }).fail(function(xhr) {
-                $('#tokensTable').html(`<tr><td colspan="7" class="text-center py-8 text-red-500">加载失败: ${xhr.responseJSON?.error || '未知错误'}</td></tr>`);
+                $('#tokensTable').html(`<tr><td colspan="8" class="text-center py-8 text-red-500">加载失败: ${xhr.responseJSON?.error || '未知错误'}</td></tr>`);
+            });
+        }
+        
+        function applyFilter() {
+            const search = $('#searchInput').val().toLowerCase();
+            const status = $('#statusFilter').val();
+            
+            filteredTokens = allTokens.filter(token => {
+                const matchSearch = !search || token.name.toLowerCase().includes(search);
+                const matchStatus = !status || (status === 'active' ? token.is_active : !token.is_active);
+                return matchSearch && matchStatus;
+            });
+            
+            currentPage = 1;
+            selectedIds.clear();
+            updateBatchButton();
+            renderTable();
+        }
+        
+        function renderTable() {
+            const tbody = $('#tokensTable');
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = filteredTokens.slice(start, end);
+            
+            if (pageData.length > 0) {
+                tbody.html(pageData.map(token => {
+                    const statusClass = token.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700';
+                    const statusText = token.is_active ? '启用' : '禁用';
+                    const lastUsed = token.last_used_at ? new Date(token.last_used_at).toLocaleString('zh-CN') : '从未使用';
+                    const createdAt = new Date(token.created_at).toLocaleString('zh-CN');
+                    const checked = selectedIds.has(token.id) ? 'checked' : '';
+                    
+                    return `
+                        <tr class="hover:bg-blue-50">
+                            <td class="px-6 py-4"><input type="checkbox" ${checked} onchange="toggleSelect(${token.id})"></td>
+                            <td class="px-6 py-4">${token.id}</td>
+                            <td class="px-6 py-4 font-medium">${token.name}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${token.description || '-'}</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 rounded text-xs ${statusClass}">${statusText}</span>
+                            </td>
+                            <td class="px-6 py-4 text-sm">${lastUsed}</td>
+                            <td class="px-6 py-4 text-sm">${createdAt}</td>
+                            <td class="px-6 py-4 text-sm">
+                                <button onclick="toggleStatus(${token.id})" class="text-yellow-600 hover:text-yellow-700 mr-3">
+                                    ${token.is_active ? '禁用' : '启用'}
+                                </button>
+                                <button onclick="deleteToken(${token.id})" class="text-red-600 hover:text-red-700">删除</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join(''));
+            } else {
+                tbody.html('<tr><td colspan="8" class="text-center py-8 text-gray-400">暂无数据</td></tr>');
+            }
+            
+            renderPagination();
+        }
+        
+        function renderPagination() {
+            const totalPages = Math.ceil(filteredTokens.length / pageSize);
+            if (totalPages <= 1) {
+                $('#pagination').html('');
+                return;
+            }
+            
+            let html = '';
+            if (currentPage > 1) {
+                html += `<button onclick="goToPage(${currentPage - 1})" class="px-4 py-2 bg-white border rounded hover:bg-gray-50">上一页</button>`;
+            }
+            
+            const start = Math.max(1, currentPage - 2);
+            const end = Math.min(totalPages, currentPage + 2);
+            
+            for (let i = start; i <= end; i++) {
+                html += `<button onclick="goToPage(${i})" class="px-4 py-2 ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white border hover:bg-gray-50'} rounded">${i}</button>`;
+            }
+            
+            if (currentPage < totalPages) {
+                html += `<button onclick="goToPage(${currentPage + 1})" class="px-4 py-2 bg-white border rounded hover:bg-gray-50">下一页</button>`;
+            }
+            
+            $('#pagination').html(html);
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            renderTable();
+        }
+        
+        function toggleSelect(id) {
+            if (selectedIds.has(id)) {
+                selectedIds.delete(id);
+            } else {
+                selectedIds.add(id);
+            }
+            updateBatchButton();
+        }
+        
+        function toggleSelectAll() {
+            const checked = $('#selectAll').prop('checked');
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = filteredTokens.slice(start, end);
+            
+            pageData.forEach(token => {
+                if (checked) {
+                    selectedIds.add(token.id);
+                } else {
+                    selectedIds.delete(token.id);
+                }
+            });
+            
+            updateBatchButton();
+            renderTable();
+        }
+        
+        function updateBatchButton() {
+            if (selectedIds.size > 0) {
+                $('#batchDeleteBtn').removeClass('hidden').text(`批量删除 (${selectedIds.size})`);
+            } else {
+                $('#batchDeleteBtn').addClass('hidden');
+            }
+        }
+        
+        function batchDelete() {
+            if (selectedIds.size === 0) return;
+            if (!confirm(`确定删除选中的 ${selectedIds.size} 个Token吗？`)) return;
+            
+            const ids = Array.from(selectedIds);
+            let completed = 0;
+            
+            ids.forEach(id => {
+                $.ajax({
+                    url: `/admin/api/admin-tokens/${id}`,
+                    method: 'DELETE',
+                    success: function() {
+                        completed++;
+                        if (completed === ids.length) {
+                            selectedIds.clear();
+                            updateBatchButton();
+                            loadTokens();
+                        }
+                    },
+                    error: function() {
+                        completed++;
+                        if (completed === ids.length) {
+                            loadTokens();
+                        }
+                    }
+                });
             });
         }
 
@@ -243,7 +391,7 @@
         }
 
         function deleteToken(id) {
-            if (confirm('确定删除该Token吗？删除后使用该Token的外部系统将无法访问API。')) {
+            if (confirm('确定删除该Token吗？')) {
                 $.ajax({
                     url: `/admin/api/admin-tokens/${id}`,
                     method: 'DELETE',
@@ -256,9 +404,24 @@
                 });
             }
         }
+        
+        $('#searchInput').on('keyup', function(e) {
+            if (e.key === 'Enter') applyFilter();
+        });
 
         loadTokens();
     </script>
+
+    <footer class="bg-white border-t border-gray-100 mt-12" style="box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.1);">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex justify-end items-center gap-2 text-sm">
+                <span class="iconify text-blue-600" data-icon="mdi:github"></span>
+                <a href="https://github.com/xkatld" target="_blank" class="text-blue-600 hover:text-blue-700">xkatld</a>
+                <span class="text-gray-400">|</span>
+                <span class="text-gray-600">v1.0.1</span>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>
 

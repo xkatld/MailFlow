@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MailFlow - SMTP负载均衡系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .feature-card {
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-white">
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold gradient-text">MailFlow</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/admin/login" class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition duration-200">
+                        登录
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section class="py-20 sm:py-28">
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
+                    企业级 SMTP<span class="gradient-text">负载均衡</span>系统
+                </h2>
+                <p class="text-xl text-gray-600 mb-8">
+                    高效的邮件发送解决方案，支持多SMTP配置、智能负载均衡、实时监控统计
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <a href="/admin/login" class="px-8 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition duration-200">
+                        开始使用
+                    </a>
+                    <a href="#features" class="px-8 py-3 rounded-lg border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold transition duration-200">
+                        了解更多
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="py-16 sm:py-20">
+            <h3 class="text-3xl font-bold text-center text-gray-900 mb-12">核心功能</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="feature-card bg-white p-8 rounded-lg shadow-md border border-gray-100">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                        <span class="iconify text-2xl text-blue-600" data-icon="material-symbols:mail"></span>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-900 mb-2">多SMTP配置</h4>
+                    <p class="text-gray-600">支持配置多个SMTP服务器，实现灵活的邮件发送策略</p>
+                </div>
+
+                <div class="feature-card bg-white p-8 rounded-lg shadow-md border border-gray-100">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                        <span class="iconify text-2xl text-blue-600" data-icon="material-symbols:balance"></span>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-900 mb-2">智能负载均衡</h4>
+                    <p class="text-gray-600">自动分配邮件任务到最优SMTP服务器，提高发送效率</p>
+                </div>
+
+                <div class="feature-card bg-white p-8 rounded-lg shadow-md border border-gray-100">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                        <span class="iconify text-2xl text-blue-600" data-icon="material-symbols:analytics"></span>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-900 mb-2">实时监控</h4>
+                    <p class="text-gray-600">全面的统计分析和健康检查，实时掌握系统状态</p>
+                </div>
+
+                <div class="feature-card bg-white p-8 rounded-lg shadow-md border border-gray-100">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                        <span class="iconify text-2xl text-blue-600" data-icon="material-symbols:key"></span>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-900 mb-2">API接口</h4>
+                    <p class="text-gray-600">RESTful API接口，轻松集成到你的应用系统</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-16 sm:py-20">
+            <h3 class="text-3xl font-bold text-center text-gray-900 mb-12">快速开始</h3>
+            <div class="bg-white rounded-lg shadow-md border border-gray-100 p-8 sm:p-12">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-bold mx-auto mb-4">
+                            1
+                        </div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">部署应用</h4>
+                        <p class="text-gray-600">一键部署MailFlow服务，自动安装依赖环境</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-bold mx-auto mb-4">
+                            2
+                        </div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">配置SMTP</h4>
+                        <p class="text-gray-600">在管理后台添加和配置SMTP服务器</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-bold mx-auto mb-4">
+                            3
+                        </div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">发送邮件</h4>
+                        <p class="text-gray-600">使用API发送邮件，系统自动负载均衡</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-16 sm:py-20">
+            <h3 class="text-3xl font-bold text-center text-gray-900 mb-12">系统特性</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="bg-white rounded-lg shadow-md border border-gray-100 p-6">
+                    <div class="flex items-start gap-4">
+                        <span class="iconify text-2xl text-green-500 flex-shrink-0" data-icon="material-symbols:check-circle"></span>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-1">高可用设计</h4>
+                            <p class="text-gray-600">支持多Worker并发处理，故障自动转移</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md border border-gray-100 p-6">
+                    <div class="flex items-start gap-4">
+                        <span class="iconify text-2xl text-green-500 flex-shrink-0" data-icon="material-symbols:check-circle"></span>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-1">完整日志</h4>
+                            <p class="text-gray-600">详细的发送日志记录，便于问题排查</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md border border-gray-100 p-6">
+                    <div class="flex items-start gap-4">
+                        <span class="iconify text-2xl text-green-500 flex-shrink-0" data-icon="material-symbols:check-circle"></span>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-1">灵活配置</h4>
+                            <p class="text-gray-600">支持SSL/TLS/STARTTLS等多种加密方式</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md border border-gray-100 p-6">
+                    <div class="flex items-start gap-4">
+                        <span class="iconify text-2xl text-green-500 flex-shrink-0" data-icon="material-symbols:check-circle"></span>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-1">实时统计</h4>
+                            <p class="text-gray-600">邮件发送量、成功率、失败分析等详细统计</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-16 sm:py-20 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg">
+            <div class="text-center text-white">
+                <h3 class="text-3xl font-bold mb-4">准备好了吗？</h3>
+                <p class="text-lg text-blue-100 mb-8">开始使用 MailFlow，提升邮件发送效率</p>
+                <a href="/admin/login" class="inline-block px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition duration-200">
+                    立即登录
+                </a>
+            </div>
+        </section>
+    </div>
+
+    <footer class="bg-gray-900 text-gray-400 py-12 mt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <a href="https://github.com/xkatld/MailFlow" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 hover:text-white transition">
+                            <span class="iconify text-2xl" data-icon="mdi:github"></span>
+                            <span class="text-white font-semibold">xkatld</span>
+                        </a>
+                    </div>
+                    <p class="text-sm">企业级SMTP负载均衡系统，提供高效可靠的邮件发送解决方案</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-4">快速链接</h4>
+                    <ul class="text-sm space-y-2">
+                        <li><a href="/admin/login" class="hover:text-white transition">管理后台</a></li>
+                        <li><a href="#features" class="hover:text-white transition">功能介绍</a></li>
+                        <li><a href="https://github.com/xkatld/MailFlow" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">GitHub</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-4">更多信息</h4>
+                    <ul class="text-sm space-y-2">
+                        <li><span class="text-gray-500">版本: v1.0.1</span></li>
+                        <li><span class="text-gray-500">运行环境: Linux</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="pt-8 text-right">
+                <div class="inline-flex items-center gap-2 text-sm text-gray-600">
+                    <span class="iconify text-blue-600" data-icon="mdi:github"></span>
+                    <a href="https://github.com/xkatld" target="_blank" class="text-blue-600 hover:text-blue-700">xkatld</a>
+                    <span class="text-gray-400">|</span>
+                    <span>v1.0.1</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('a[href^="#"]').on('click', function(e) {
+                e.preventDefault();
+                const target = $(this.getAttribute('href'));
+                if (target.length) {
+                    $('html, body').stop().animate({
+                        scrollTop: target.offset().top - 60
+                    }, 1000);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

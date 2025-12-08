@@ -143,14 +143,12 @@ func sendEmail(config *models.SMTPConfig, to string, task *queue.EmailTask) erro
 
 	switch encryption {
 	case "ssl":
-		// SSL: 直接加密连接 (通常465端口)
 		d.SSL = true
 		d.TLSConfig = &tls.Config{
 			ServerName:         config.Host,
 			InsecureSkipVerify: false,
 		}
 	case "tls", "starttls":
-		// TLS/STARTTLS: 明文连接后升级加密 (通常587端口)
 		d.SSL = false
 		d.TLSConfig = &tls.Config{
 			ServerName:         config.Host,
@@ -160,7 +158,6 @@ func sendEmail(config *models.SMTPConfig, to string, task *queue.EmailTask) erro
 		d.SSL = false
 		d.TLSConfig = nil
 	default:
-		// 默认使用STARTTLS
 		d.SSL = false
 		d.TLSConfig = &tls.Config{
 			ServerName:         config.Host,
